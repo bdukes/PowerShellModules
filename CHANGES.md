@@ -6,5 +6,6 @@
    - Added `AdministratorRole` module
    - Added `Add-HostFileEntry` module
    - Added `ACL-Permissions` module
+   - Added `DnnWebsiteManagement` module
  - Aug. 2016
    - Added `Recycle` module
