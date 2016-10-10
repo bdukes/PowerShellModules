@@ -5,5 +5,6 @@
    - Added `SslWebBinding` module
    - Added `AdministratorRole` module
    - Added `Add-HostFileEntry` module
+   - Added `ACL-Permissions` module
  - Aug. 2016
    - Added `Recycle` module
