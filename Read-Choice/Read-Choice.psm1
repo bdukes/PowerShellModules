@@ -2,16 +2,16 @@ Set-StrictMode -Version Latest
 
 function Read-Choice {
   param(
-    [string]$caption,
-    [string]$message,
-    [array]$choices,
+    [Parameter(Mandatory=$true)][string]$caption,
+    [Parameter(Mandatory=$true)][string]$message,
+    [Parameter(Mandatory=$true)][array]$choices,
     [int]$defaultChoiceIndex = -1
   );
 
   if ($choices[0] -is [string]) {
     $choices = $choices | % { New-Object System.Management.Automation.Host.ChoiceDescription $_ }
   }
-  
+
   $answerIndex = $host.ui.PromptForChoice($caption, $message, $choices, $defaultChoiceIndex)
 
   return $choices[$answerIndex].Label
@@ -35,8 +35,8 @@ function Read-Choice {
 
 function Read-BooleanChoice {
   param(
-    [string]$caption,
-    [string]$message,
+    [Parameter(Mandatory=$true)][string]$caption,
+    [Parameter(Mandatory=$true)][string]$message,
     [string]$trueLabel = '&Yes',
     [string]$trueHelp = '',
     [string]$falseLabel = '&No',
