@@ -1,5 +1,5 @@
 #Requires -Version 3
-#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding
+#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, PSCX
 Set-StrictMode -Version:Latest
 
 Import-Module WebAdministration
