@@ -1,2 +1,5 @@
 # Change Log
- - Added Recycle module
+ - Oct. 2016
+   - Added `Write-HtmlNode` module
+ - Aug. 2016
+   - Added `Recycle` module
