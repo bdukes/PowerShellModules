@@ -1,5 +1,5 @@
 #Requires -Version 3
-#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, HTTPS
+#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding
 Set-StrictMode -Version:Latest
 
 Import-Module WebAdministration
@@ -38,12 +38,12 @@ function Install-DNNResources {
         throw 'You must specify the site name (e.g. dnn.local) if you are not in the website'
     }
 
-    try 
+    try
     {
         $result = Invoke-WebRequest "https://$siteName/Install/Install.aspx?mode=InstallResources"
 
         if ($result.StatusCode -ne 200) {
-            
+
             Write-Warning "There was an error trying to install the resources: Status code $($result.StatusCode)"
             return
         }
@@ -70,12 +70,12 @@ function Remove-DNNSite {
     [parameter(Mandatory=$true,position=0)]
     [string]$siteName
   );
- 
+
   Assert-AdministratorRole
 
   #TODO: remove certificate
   Remove-SslWebBinding $siteName
-  
+
   if (Test-Path IIS:\Sites\$siteName) {
     $website = Get-Website $siteName
     foreach ($binding in $website.Bindings.Collection) {
@@ -90,14 +90,14 @@ function Remove-DNNSite {
   } else {
     Write-Host "$siteName website not found in IIS"
   }
- 
+
   if (Test-Path IIS:\AppPools\$siteName) {
     Write-Host "Removing $siteName app pool from IIS"
     Remove-WebAppPool $siteName
   } else {
     Write-Host "$siteName app pool not found in IIS"
   }
-  
+
   if (Test-Path $www\$siteName) {
     Write-Host "Deleting $www\$siteName"
     Remove-Item $www\$siteName -Recurse -Force
@@ -141,7 +141,7 @@ function Rename-DNNSite {
     [parameter(Mandatory=$true,position=1)]
     [string]$newSiteName
   );
- 
+
   Assert-AdministratorRole
 
   if ((Test-Path IIS:\AppPools\$oldSiteName) -and (Get-WebAppPoolState $oldSiteName).Value -eq 'Started') {
@@ -168,7 +168,7 @@ function Rename-DNNSite {
   } else {
     Write-Host "$oldSiteName website not found in IIS"
   }
- 
+
   if (Test-Path IIS:\AppPools\$oldSiteName) {
     Write-Host "Renaming $oldSiteName app pool in IIS to $newSiteName"
     Rename-Item IIS:\AppPools\$oldSiteName $newSiteName
@@ -177,7 +177,7 @@ function Rename-DNNSite {
   }
 
   Set-ItemProperty IIS:\Sites\$newSiteName -Name ApplicationPool -Value $newSiteName
- 
+
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(Encode-SQLName $oldSiteName)") {
     Write-Host "Closing connections to $oldSiteName database"
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$oldSiteName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
@@ -196,7 +196,7 @@ function Rename-DNNSite {
   Invoke-Sqlcmd -Query:"CREATE USER [IIS AppPool\$newSiteName] FOR LOGIN [IIS AppPool\$newSiteName];" -Database:$newSiteName
   Write-Host "Adding SQL Server user to db_owner role"
   Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'IIS AppPool\$newSiteName';" -Database:$newSiteName
- 
+
   $ownedRoles = Invoke-SqlCmd -Query:"SELECT p2.name FROM sys.database_principals p1 JOIN sys.database_principals p2 ON p1.principal_id = p2.owning_principal_id WHERE p1.name = 'IIS AppPool\$oldSiteName';" -Database:$newSiteName
   foreach ($roleRow in $ownedRoles) {
     $roleName = $roleRow.name
@@ -219,14 +219,14 @@ function Rename-DNNSite {
   $databaseOwner = $webConfig.configuration.dotnetnuke.data.providers.add.databaseOwner.TrimEnd('.')
   $connectionString = "Data Source=.`;Initial Catalog=$newSiteName`;Integrated Security=true"
   $webConfig.configuration.connectionStrings.add | ? { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $connectionString }
-  $webConfig.configuration.appSettings.add | ? { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }  
+  $webConfig.configuration.appSettings.add | ? { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }
   $webConfig.Save("$www\$newSiteName\Website\web.config")
 
   Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'PortalAlias' $databaseOwner $objectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$oldSiteName', '$newSiteName')" -Database:$newSiteName
 
   Remove-HostFileEntry $oldSiteName
   Add-HostFileEntry $newSiteName
-   
+
   Start-WebAppPool $newSiteName
 
   Write-Host "Launching https://$newSiteName"
@@ -261,7 +261,7 @@ function Restore-DNNSite {
     [parameter(Mandatory=$false)]
     [switch]$includeSource = $false
   );
- 
+
   $siteZipFile = Get-Item $siteZip
   if ($siteZipFile.Extension -eq '.bak') {
     $siteZip = $databaseBackup
@@ -301,7 +301,7 @@ function Upgrade-DNNSite {
     [DnnProduct]$product = [DnnProduct]::DnnPlatform,
     [switch]$includeSource = $true
   );
- 
+
   Extract-Packages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -UseUpgradePackage
 
   Write-Host "Launching https://$siteName/Install/Install.aspx?mode=upgrade"
@@ -357,7 +357,7 @@ function New-DNNSite {
 
   Write-Host "Setting modify permission on website files for IIS AppPool\$siteName"
   Set-ModifyPermission $www\$siteName\Website $siteName
- 
+
   [xml]$webConfig = Get-Content $www\$siteName\Website\web.config
   if ($databaseBackup -eq '') {
     Write-Host "Creating new database"
@@ -453,7 +453,7 @@ function New-DNNSite {
 
     Write-Host 'Clearing WebServers table'
     Invoke-Sqlcmd -Query:"TRUNCATE TABLE $(Get-DNNDatabaseObjectName 'WebServers' $databaseOwner $objectQualifier)" -Database:$siteName
-    
+
     Write-Host "Turning off event log buffer"
     Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'HostSettings' $databaseOwner $objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'EventLogBuffer'" -Database:$siteName
 
@@ -470,7 +470,7 @@ function New-DNNSite {
   $connectionString = "Data Source=.`;Initial Catalog=$siteName`;Integrated Security=true"
   $webConfig.configuration.connectionStrings.add | ? { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $connectionString }
   $webConfig.configuration.appSettings.add | ? { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }
-  
+
   Write-Host "Updating web.config with connection string and data provider attributes"
   $webConfig.configuration.dotnetnuke.data.providers.add | ? { $_.name -eq 'SqlDataProvider' } | ForEach-Object { $_.objectQualifier = $objectQualifier; $_.databaseOwner = $databaseOwner }
   Write-Host "Updating web.config to allow short passwords"
@@ -478,7 +478,7 @@ function New-DNNSite {
   Write-Host "Updating web.config to turn on debug mode"
   $webConfig.configuration['system.web'].compilation.debug = 'true'
   $webConfig.Save("$www\$siteName\Website\web.config")
- 
+
   if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$siteName")")) {
     Write-Host "Creating SQL Server login for IIS AppPool\$siteName"
     Invoke-Sqlcmd -Query:"CREATE LOGIN [IIS AppPool\$siteName] FROM WINDOWS WITH DEFAULT_DATABASE = [$siteName];" -Database:master
@@ -487,7 +487,7 @@ function New-DNNSite {
   Invoke-Sqlcmd -Query:"CREATE USER [IIS AppPool\$siteName] FOR LOGIN [IIS AppPool\$siteName];" -Database:$siteName
   Write-Host "Adding SQL Server user to db_owner role"
   Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'IIS AppPool\$siteName';" -Database:$siteName
- 
+
   Write-Host "Launching https://$siteName"
   Start-Process -FilePath:https://$siteName
 
@@ -521,19 +521,19 @@ function getPackageName([System.Version]$version, [DnnProduct]$product) {
     $72version = New-Object System.Version("7.2")
     $74version = New-Object System.Version("7.4")
     if ($version -lt $72version) {
-        $productPackageNames = @{ 
+        $productPackageNames = @{
             [DnnProduct]::DnnPlatform = "DotNetNuke_Community"
             [DnnProduct]::EvoqContent = "DotNetNuke_Professional"
             [DnnProduct]::EvoqContentEnterprise = "DotNetNuke_Enterprise"
         }
     } elseif ($version -lt $74version) {
-        $productPackageNames = @{ 
+        $productPackageNames = @{
             [DnnProduct]::DnnPlatform = "DNN_Platform"
             [DnnProduct]::EvoqContent = "Evoq_Content"
             [DnnProduct]::EvoqContentEnterprise = "Evoq_Enterprise"
         }
     } else {
-        $productPackageNames = @{ 
+        $productPackageNames = @{
             [DnnProduct]::DnnPlatform = "DNN_Platform"
             [DnnProduct]::EvoqContent = "Evoq_Content_Basic"
             [DnnProduct]::EvoqContentEnterprise = "Evoq_Content"
@@ -616,7 +616,7 @@ function Extract-Packages {
   if ($version -eq '') {
     $version = $defaultDNNVersion
   }
- 
+
   $v = New-Object System.Version($version)
   $majorVersion = $v.Major
   if ($majorVersion -gt 7) {
@@ -631,7 +631,10 @@ function Extract-Packages {
     }
   }
   Write-Verbose "Formatted Version is $formattedVersion"
-  
+
+  if ($env:soft -eq $null) {
+      throw 'You must set the environment variable `soft` to the path that contains your DNN install packages'
+  }
   $packageName = getPackageName $v $product
   Write-Verbose "Package Name is $packageName"
   switch ($product) {
@@ -645,8 +648,8 @@ function Extract-Packages {
     Write-Host "Extracting DNN $formattedVersion source"
     $sourcePath = "$packagesFolder\${packageName}_${formattedVersion}_Source.zip"
     Write-Verbose "Source Path is $sourcePath"
-    if (-not (Test-Path $sourcePath)) { 
-        Write-Warning "Source package does not exist, falling back to community source package" 
+    if (-not (Test-Path $sourcePath)) {
+        Write-Warning "Source package does not exist, falling back to community source package"
         $fallbackPackageName = getPackageName $v DnnPlatform
         $sourcePath = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion\${fallbackPackageName}_${formattedVersion}_Source.zip"
         Write-Verbose "Fallback Source Path is $sourcePath"
@@ -654,11 +657,11 @@ function Extract-Packages {
     }
     Write-Verbose "extracting from $sourcePath to $www\$siteName"
     Extract-Zip "$www\$siteName" "$sourcePath"
-    
+
     Write-Host "Copying DNN $formattedVersion source symbols into install directory"
     $symbolsPath = "$packagesFolder\${packageName}_${formattedVersion}_Symbols.zip"
     Write-Verbose "Symbols Path is $sourcePath"
-    if (-not (Test-Path $symbolsPath)) { 
+    if (-not (Test-Path $symbolsPath)) {
         Write-Warning "Symbols package does not exist, falling back to community symbols package"
         $fallbackPackageName = getPackageName $v DnnPlatform
         $symbolsPath = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion\${fallbackPackageName}_${formattedVersion}_Symbols.zip"
@@ -669,7 +672,7 @@ function Extract-Packages {
     Copy-Item $symbolsPath $www\$siteName\Website\Install\Module
 
     Write-Host "Updating site URL in sln files"
-    Get-ChildItem $www\$siteName\*.sln | ForEach-Object { 
+    Get-ChildItem $www\$siteName\*.sln | ForEach-Object {
         $slnContent = (Get-Content $_);
         $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Community"', "`"https://$siteName`"";
         $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Professional"', "`"https://$siteName`"";
@@ -678,7 +681,7 @@ function Extract-Packages {
         Set-Content $_ $slnContent;
     }
   }
- 
+
   if ($siteZip -eq '') {
     if ($useUpgradePackage) {
         $siteZip = "$packagesFolder\${packageName}_${formattedVersion}_Upgrade.zip"
@@ -686,7 +689,7 @@ function Extract-Packages {
         $siteZip = "$packagesFolder\${packageName}_${formattedVersion}_Install.zip"
     }
   }
-  
+
   $siteZip = (Get-Item $siteZip).FullName
   Write-Host "Extracting DNN site"
   if (-not (Test-Path $siteZip)) {
@@ -700,20 +703,20 @@ function Extract-Packages {
   } else {
     $siteZipOutput = "$www\$siteName\Extracted_Website"
     Extract-Zip "$siteZipOutput" "$siteZip"
- 
+
     $from = $siteZipOutput
     $unzippedFiles = @(Get-ChildItem $siteZipOutput)
     if ($unzippedFiles.Length -eq 1) {
       $from += "\$unzippedFiles"
     }
   }
- 
+
   # add * only if the directory already exists, based on https://groups.google.com/d/msg/microsoft.public.windows.powershell/iTEakZQQvh0/TLvql_87yzgJ
   $to = "$www\$siteName\Website"
   $from += '/'
   if (Test-Path $to -PathType Container) { $from += '*' }
   Copy-Item $from $to -Force -Recurse
- 
+
   if ($siteZipOutput) {
     Remove-Item $siteZipOutput -Force -Recurse
   }
@@ -724,7 +727,7 @@ function New-DNNDatabase {
     [parameter(Mandatory=$true,position=0)]
     [string]$siteName
   );
- 
+
   Invoke-Sqlcmd -Query:"CREATE DATABASE [$siteName];" -Database:master
   Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET RECOVERY SIMPLE;" -Database:master
 }
@@ -754,23 +757,23 @@ function Restore-DNNDatabase {
   } else {
     Write-Warning 'Unable to find SQL Server info in registry, backup file will not have ACL permissions set'
   }
- 
+
   #based on http://redmondmag.com/articles/2009/12/21/automated-restores.aspx
   $server = New-Object Microsoft.SqlServer.Management.Smo.Server('(local)')
   $dbRestore = New-Object Microsoft.SqlServer.Management.Smo.Restore
- 
+
   $dbRestore.Action = 'Database'
   $dbRestore.NoRecovery = $false
   $dbRestore.ReplaceDatabase = $true
   $dbRestore.Devices.AddDevice($databaseBackup, [Microsoft.SqlServer.Management.Smo.DeviceType]::File)
   $dbRestore.Database = $siteName
-  
+
   $dbRestoreFile = New-Object Microsoft.SqlServer.Management.Smo.RelocateFile
   $dbRestoreLog = New-Object Microsoft.SqlServer.Management.Smo.RelocateFile
- 
+
   $logicalDataFileName = $siteName
   $logicalLogFileName = $siteName
- 
+
   foreach ($file in $dbRestore.ReadFileList($server)) {
     switch ($file.Type) {
       'D' { $logicalDataFileName = $file.LogicalName }
@@ -782,10 +785,10 @@ function Restore-DNNDatabase {
   $dbRestoreFile.PhysicalFileName = $server.Information.MasterDBPath + '\' + $siteName + '_Data.mdf'
   $dbRestoreLog.LogicalFileName = $logicalLogFileName
   $dbRestoreLog.PhysicalFileName = $server.Information.MasterDBLogPath + '\' + $siteName + '_Log.ldf'
- 
+
   $dbRestore.RelocateFiles.Add($dbRestoreFile) | Out-Null
   $dbRestore.RelocateFiles.Add($dbRestoreLog) | Out-Null
- 
+
   try {
     $dbRestore.SqlRestore($server)
   }
