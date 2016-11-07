@@ -622,7 +622,9 @@ function Extract-Packages {
   if ($majorVersion -gt 7) {
     $formattedVersion = $v.Major.ToString('0') + '.' + $v.Minor.ToString('0') + '.' + $v.Build.ToString('0')
     if ($formattedVersion -eq '8.0.4') { $formattedVersion = '8.0.4.226' }
-    if ($formattedVersion -eq '8.5.0') { $formattedVersion = '8.5.0.296' } #Evoq Content
+    if ($product -eq [DnnProduct]::EvoqContentEnterprise) {
+        if ($formattedVersion -eq '8.5.0') { $formattedVersion = '8.5.0.296' } #Evoq Content
+    }
   } else {
     $formattedVersion = $v.Major.ToString('0#') + '.' + $v.Minor.ToString('0#') + '.' + $v.Build.ToString('0#')
     if ($formattedVersion -eq '06.01.04') { $formattedVersion = '06.01.04.127' }
@@ -640,8 +642,8 @@ function Extract-Packages {
   Write-Verbose "Package Name is $packageName"
   switch ($product) {
     DnnPlatform { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion"; break; }
-    EvoqContent { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke PE"; break; }
-    EvoqContentEnterprise { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke EE"; break; }
+    EvoqContent { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content Basic"; break; }
+    EvoqContentEnterprise { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content"; break; }
   }
   Write-Verbose "Packages Folder is $packagesFolder"
 
