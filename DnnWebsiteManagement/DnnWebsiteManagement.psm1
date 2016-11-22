@@ -834,23 +834,30 @@ function Update-WizardUrls {
 }
 
 function Watermark-Logos {
-  param(
-    [parameter(Mandatory=$true,position=0)]
-    [string]$siteName,
-    [parameter(Mandatory=$true,position=1)]
-    [string]$siteNameExtension
-  );
+    param(
+        [parameter(Mandatory=$true,position=0)]
+        [string]$siteName,
+        [parameter(Mandatory=$true,position=1)]
+        [string]$siteNameExtension
+    );
 
-  if (Get-Command "mogrify" -ErrorAction:SilentlyContinue) {
+    if (Get-Command 'gm.exe' -ErrorAction:SilentlyContinue) {
+        $cmd = 'gm.exe'
+        $subCmd = 'mogrify'
+    } elseif (Get-Command 'mogrify' -ErrorAction:SilentlyContinue) {
+        $cmd = 'mogrify'
+        $subCmd = ''
+    } else {
+        Write-Warning "Could not watermark logos, because neither GrapgicsMagick nor ImageMagick's mogrify command could not be found"
+        return
+    }
+
     $logos = Invoke-Sqlcmd -Query:"SELECT HomeDirectory + N'/' + LogoFile AS Logo FROM $(Get-DNNDatabaseObjectName 'Vw_Portals' $databaseOwner $objectQualifier) WHERE LogoFile IS NOT NULL" -Database:$siteName
     $watermarkText = $siteNameExtension.Substring(1)
     foreach ($logo in $logos) {
         $logoFile = "$www\$siteName\Website\" + $logo.Logo.Replace('/', '\')
-        mogrify -font Arial -pointsize 60 -draw "gravity Center fill #00ff00 text 0,0 $watermarkText" -draw "gravity NorthEast fill #ff00ff text 0,0 $watermarkText" -draw "gravity SouthWest fill #00ffff text 0,0 $watermarkText" -draw "gravity NorthWest fill #ff0000 text 0,0 $watermarkText" -draw "gravity SouthEast fill #0000ff text 0,0 $watermarkText" $logoFile
+        & $cmd $subCmd -font Arial -pointsize 60 -draw "gravity Center fill #00ff00 text 0,0 $watermarkText" -draw "gravity NorthEast fill #ff00ff text 0,0 $watermarkText" -draw "gravity SouthWest fill #00ffff text 0,0 $watermarkText" -draw "gravity NorthWest fill #ff0000 text 0,0 $watermarkText" -draw "gravity SouthEast fill #0000ff text 0,0 $watermarkText" $logoFile
     }
-  } else {
-    Write-Warning "Could not watermark logos, because ImageMagick's mogrify command could not be found"
-  }
 }
 
 Export-ModuleMember Install-DNNResources
