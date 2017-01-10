@@ -19,7 +19,7 @@ Add-Type -TypeDefinition @"
       DnnPlatform,
       EvoqContent,
       EvoqContentEnterprise,
-      ////EvoqSocial, // TODO: support Social/Engage
+      EvoqSocial,
    }
 "@
 
@@ -525,18 +525,21 @@ function getPackageName([System.Version]$version, [DnnProduct]$product) {
             [DnnProduct]::DnnPlatform = "DotNetNuke_Community"
             [DnnProduct]::EvoqContent = "DotNetNuke_Professional"
             [DnnProduct]::EvoqContentEnterprise = "DotNetNuke_Enterprise"
+            [DnnProduct]::EvoqEngage = "Evoq_Social"
         }
     } elseif ($version -lt $74version) {
         $productPackageNames = @{
             [DnnProduct]::DnnPlatform = "DNN_Platform"
             [DnnProduct]::EvoqContent = "Evoq_Content"
             [DnnProduct]::EvoqContentEnterprise = "Evoq_Enterprise"
+            [DnnProduct]::EvoqEngage = "Evoq_Social"
         }
     } else {
         $productPackageNames = @{
             [DnnProduct]::DnnPlatform = "DNN_Platform"
             [DnnProduct]::EvoqContent = "Evoq_Content_Basic"
             [DnnProduct]::EvoqContentEnterprise = "Evoq_Content"
+            [DnnProduct]::EvoqEngage = "Evoq_Engage"
         }
     }
     return $productPackageNames.Get_Item($product)
@@ -647,6 +650,7 @@ function Extract-Packages {
     DnnPlatform { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion"; break; }
     EvoqContent { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content Basic"; break; }
     EvoqContentEnterprise { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content"; break; }
+    EvoqEngage { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Engage"; break; }
   }
   Write-Verbose "Packages Folder is $packagesFolder"
 
