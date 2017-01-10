@@ -622,6 +622,9 @@ function Extract-Packages {
   if ($majorVersion -gt 7) {
     $formattedVersion = $v.Major.ToString('0') + '.' + $v.Minor.ToString('0') + '.' + $v.Build.ToString('0')
     if ($formattedVersion -eq '8.0.4') { $formattedVersion = '8.0.4.226' }
+    if ($product -eq [DnnProduct]::DnnPlatform) {
+        if ($formattedVersion -eq '9.0.0') { $formattedVersion = '9.0.0.1002' }
+    }
     if ($product -eq [DnnProduct]::EvoqContentEnterprise) {
         if ($formattedVersion -eq '8.5.0') { $formattedVersion = '8.5.0.296' } #Evoq Content
     }
