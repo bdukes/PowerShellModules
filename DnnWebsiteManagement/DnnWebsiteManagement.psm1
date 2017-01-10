@@ -19,7 +19,7 @@ Add-Type -TypeDefinition @"
       DnnPlatform,
       EvoqContent,
       EvoqContentEnterprise,
-      EvoqSocial,
+      EvoqEngage,
    }
 "@
 
