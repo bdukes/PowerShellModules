@@ -545,6 +545,31 @@ function getPackageName([System.Version]$version, [DnnProduct]$product) {
     return $productPackageNames.Get_Item($product)
 }
 
+function findPackagePath([System.Version]$version, [DnnProduct]$product, [string]$type) {
+    $majorVersion = $version.Major
+    switch ($product) {
+        DnnPlatform { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion"; break; }
+        EvoqContent { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content Basic"; break; }
+        EvoqContentEnterprise { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content"; break; }
+        EvoqEngage { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Engage"; break; }
+    }
+
+    $packageName = getPackageName $version $product
+        
+    $formattedVersion = $version.Major.ToString('0') + '.' + $version.Minor.ToString('0') + '.' + $version.Build.ToString('0')
+    $package = Get-Item "$packagesFolder\${packageName}_${formattedVersion}*_${type}.zip"
+    if ($package -eq $null) {
+        $formattedVersion = $version.Major.ToString('0#') + '.' + $version.Minor.ToString('0#') + '.' + $version.Build.ToString('0#')
+        $package = Get-Item "$packagesFolder\${packageName}_${formattedVersion}*_${type}.zip"
+    }
+        
+    if (($package -eq $null) -and ($product -ne [DnnProduct]::DnnPlatform)) {
+        return findPackagePath $version DnnPlatform $type
+    } else {
+        return $package.FullName
+    }
+}
+
 function Extract-Zip {
   param(
     [parameter(Mandatory=$true,position=0)]
@@ -620,63 +645,28 @@ function Extract-Packages {
     $version = $defaultDNNVersion
   }
 
-  $v = New-Object System.Version($version)
-  $majorVersion = $v.Major
-  if ($majorVersion -gt 7) {
-    $formattedVersion = $v.Major.ToString('0') + '.' + $v.Minor.ToString('0') + '.' + $v.Build.ToString('0')
-    if ($formattedVersion -eq '8.0.4') { $formattedVersion = '8.0.4.226' }
-    if ($product -eq [DnnProduct]::DnnPlatform) {
-        if ($formattedVersion -eq '9.0.0') { $formattedVersion = '9.0.0.1002' }
-    }
-    if ($product -eq [DnnProduct]::EvoqContentEnterprise) {
-        if ($formattedVersion -eq '8.5.0') { $formattedVersion = '8.5.0.296' } #Evoq Content
-    }
-  } else {
-    $formattedVersion = $v.Major.ToString('0#') + '.' + $v.Minor.ToString('0#') + '.' + $v.Build.ToString('0#')
-    if ($formattedVersion -eq '06.01.04') { $formattedVersion = '06.01.04.127' }
-    if ($product -eq [DnnProduct]::EvoqContentEnterprise) {
-      if ($formattedVersion -eq '07.03.01') { $formattedVersion = '7.3.1.20' }
-      if ($formattedVersion -eq '07.03.02') { $formattedVersion = '7.3.2' }
-    }
-  }
-  Write-Verbose "Formatted Version is $formattedVersion"
+  $version = New-Object System.Version($version)
+  Write-Verbose "Version is $version"
 
   if ($env:soft -eq $null) {
       throw 'You must set the environment variable `soft` to the path that contains your DNN install packages'
   }
-  $packageName = getPackageName $v $product
-  Write-Verbose "Package Name is $packageName"
-  switch ($product) {
-    DnnPlatform { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion"; break; }
-    EvoqContent { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content Basic"; break; }
-    EvoqContentEnterprise { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content"; break; }
-    EvoqEngage { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Engage"; break; }
-  }
-  Write-Verbose "Packages Folder is $packagesFolder"
 
   if ($includeSource -eq $true) {
-    Write-Host "Extracting DNN $formattedVersion source"
-    $sourcePath = "$packagesFolder\${packageName}_${formattedVersion}_Source.zip"
+    Write-Host "Extracting DNN $version source"
+    $sourcePath = findPackagePath $version $product 'Source'
     Write-Verbose "Source Path is $sourcePath"
     if (-not (Test-Path $sourcePath)) {
-        Write-Warning "Source package does not exist, falling back to community source package"
-        $fallbackPackageName = getPackageName $v DnnPlatform
-        $sourcePath = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion\${fallbackPackageName}_${formattedVersion}_Source.zip"
-        Write-Verbose "Fallback Source Path is $sourcePath"
-        if (-not (Test-Path $sourcePath)) { Write-Error "Fallback source package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Extract DNN $formattedVersion community source" -CategoryTargetName:$sourcePath -TargetObject:$sourcePath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist" }
+        Write-Error "Fallback source package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Extract DNN $version source" -CategoryTargetName:$sourcePath -TargetObject:$sourcePath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
     }
     Write-Verbose "extracting from $sourcePath to $www\$siteName"
     Extract-Zip "$www\$siteName" "$sourcePath"
 
-    Write-Host "Copying DNN $formattedVersion source symbols into install directory"
-    $symbolsPath = "$packagesFolder\${packageName}_${formattedVersion}_Symbols.zip"
+    Write-Host "Copying DNN $version source symbols into install directory"
+    $symbolsPath = findPackagePath $version $product 'Symbols'
     Write-Verbose "Symbols Path is $sourcePath"
     if (-not (Test-Path $symbolsPath)) {
-        Write-Warning "Symbols package does not exist, falling back to community symbols package"
-        $fallbackPackageName = getPackageName $v DnnPlatform
-        $symbolsPath = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion\${fallbackPackageName}_${formattedVersion}_Symbols.zip"
-        Write-Verbose "Fallback Symbols Path is $sourcePath"
-        if (-not (Test-Path $symbolsPath)) { Write-Error "Fallback symbols package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Copy DNN $formattedVersion community source symbols" -CategoryTargetName:$symbolsPath -TargetObject:$symbolsPath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist" }
+        Write-Error "Fallback symbols package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Copy DNN $version source symbols" -CategoryTargetName:$symbolsPath -TargetObject:$symbolsPath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
     }
     Write-Verbose "cp $symbolsPath $www\$siteName\Website\Install\Module"
     Copy-Item $symbolsPath $www\$siteName\Website\Install\Module
@@ -694,9 +684,9 @@ function Extract-Packages {
 
   if ($siteZip -eq '') {
     if ($useUpgradePackage) {
-        $siteZip = "$packagesFolder\${packageName}_${formattedVersion}_Upgrade.zip"
+        $siteZip = findPackagePath $version $product 'Upgrade'
     } else {
-        $siteZip = "$packagesFolder\${packageName}_${formattedVersion}_Install.zip"
+        $siteZip = findPackagePath $version $product 'Install'
     }
   }
 
