@@ -661,6 +661,10 @@ function Extract-Packages {
     }
     Write-Verbose "extracting from $sourcePath to $www\$siteName"
     Extract-Zip "$www\$siteName" "$sourcePath"
+    if (Test-Path "$www\$siteName\Platform\Website\" -PathType Container) {
+        Copy-Item "$www\$siteName\Platform\*" "$www\$siteName\" -Force -Recurse
+        Remove-Item "$www\$siteName\Platform\" -Force -Recurse
+    }
 
     Write-Host "Copying DNN $version source symbols into install directory"
     $symbolsPath = findPackagePath $version $product 'Symbols'
