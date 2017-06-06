@@ -8,7 +8,8 @@ Push-Location
 Import-Module SQLPS -DisableNameChecking
 Pop-Location
 
-$defaultDNNVersion = '9.1.0'
+$defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
+if ($defaultDNNVersion -eq $null) { $defaultDNNVersion = '9.1.0' }
 
 $www = $env:www
 if ($www -eq $null) { $www = 'C:\inetpub\wwwroot' }
