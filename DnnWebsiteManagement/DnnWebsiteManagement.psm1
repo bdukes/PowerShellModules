@@ -574,6 +574,8 @@ function findPackagePath([System.Version]$version, [DnnProduct]$product, [string
 
     if (($package -eq $null) -and ($product -ne [DnnProduct]::DnnPlatform)) {
         return findPackagePath $version DnnPlatform $type
+    } elseif ($package -eq $null) {
+        return $null
     } else {
         return $package.FullName
     }
@@ -665,7 +667,7 @@ function Extract-Packages {
     Write-Host "Extracting DNN $version source"
     $sourcePath = findPackagePath $version $product 'Source'
     Write-Verbose "Source Path is $sourcePath"
-    if (-not (Test-Path $sourcePath)) {
+    if ($sourcePath -eq $null -or $sourcePath -eq '' -or -not (Test-Path $sourcePath)) {
         Write-Error "Fallback source package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Extract DNN $version source" -CategoryTargetName:$sourcePath -TargetObject:$sourcePath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
     }
     Write-Verbose "extracting from $sourcePath to $www\$siteName"
@@ -678,7 +680,7 @@ function Extract-Packages {
     Write-Host "Copying DNN $version source symbols into install directory"
     $symbolsPath = findPackagePath $version $product 'Symbols'
     Write-Verbose "Symbols Path is $sourcePath"
-    if (-not (Test-Path $symbolsPath)) {
+    if ($symbolsPath -eq $null -or $symbolsPath -eq '' -or -not (Test-Path $symbolsPath)) {
         Write-Error "Fallback symbols package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Copy DNN $version source symbols" -CategoryTargetName:$symbolsPath -TargetObject:$symbolsPath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
     }
     Write-Verbose "cp $symbolsPath $www\$siteName\Website\Install\Module"
@@ -701,6 +703,12 @@ function Extract-Packages {
     } else {
         $siteZip = findPackagePath $version $product 'Install'
     }
+
+    if ($siteZip -eq $null -or $siteZip -eq '' -or -not (Test-Path $siteZip)) {
+        throw "The package for $product $version could not be found, aborting installation"
+    }
+  } elseif ($siteZip -eq $null -or $siteZip -eq '' -or -not (Test-Path $siteZip)) {
+    throw "The supplied file $siteZip could not be found, aborting installation"
   }
 
   $siteZip = (Get-Item $siteZip).FullName
