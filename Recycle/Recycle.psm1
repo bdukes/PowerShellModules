@@ -46,11 +46,14 @@ function Remove-ItemSafely {
                 $PSBoundParameters['OutBuffer'] = 1
             }
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Microsoft.PowerShell.Management\Remove-Item', [System.Management.Automation.CommandTypes]::Cmdlet)
-            if ($PSBoundParameters['DeletePermanently'] -or $PSBoundParameters['LiteralPath'] -or $PSBoundParameters['Filter'] -or $PSBoundParameters['Include'] -or $PSBoundParameters['Exclude'] -or $PSBoundParameters['Recurse'] -or $PSBoundParameters['Force'] -or $PSBoundParameters['Credential']) {
+            if ($DeletePermanently -or @($PSBoundParameters.Keys | Where-Object { @('Filter','Include','Exclude','Recurse','Force','Credential') -contains $_ }).Count -ge 1) {
                 if ($PSBoundParameters['DeletePermanently']) { $PSBoundParameters.Remove('DeletePermanently') | Out-Null }
                 $scriptCmd = {& $wrappedCmd @PSBoundParameters }
             } else {
-                $scriptCmd = {& Recycle-Item -Path $PSBoundParameters['Path'] }
+                Write-Verbose $PSCmdlet.ParameterSetName
+                Write-Verbose "Path is $($PSBoundParameters['Path'])"
+                Write-Verbose "Lit is $($PSBoundParameters['LiteralPath'])"
+                $scriptCmd = {& Recycle-Item -Path $PSBoundParameters[$PSCmdlet.ParameterSetName] }
             }
 
             $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)

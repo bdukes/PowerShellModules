@@ -8,7 +8,7 @@ Push-Location
 Import-Module SQLPS -DisableNameChecking
 Pop-Location
 
-$defaultDNNVersion = '9.0.0'
+$defaultDNNVersion = '9.1.0'
 
 $www = $env:www
 if ($www -eq $null) { $www = 'C:\inetpub\wwwroot' }
@@ -555,14 +555,14 @@ function findPackagePath([System.Version]$version, [DnnProduct]$product, [string
     }
 
     $packageName = getPackageName $version $product
-        
+
     $formattedVersion = $version.Major.ToString('0') + '.' + $version.Minor.ToString('0') + '.' + $version.Build.ToString('0')
     $package = Get-Item "$packagesFolder\${packageName}_${formattedVersion}*_${type}.zip"
     if ($package -eq $null) {
         $formattedVersion = $version.Major.ToString('0#') + '.' + $version.Minor.ToString('0#') + '.' + $version.Build.ToString('0#')
         $package = Get-Item "$packagesFolder\${packageName}_${formattedVersion}*_${type}.zip"
     }
-        
+
     if (($package -eq $null) -and ($product -ne [DnnProduct]::DnnPlatform)) {
         return findPackagePath $version DnnPlatform $type
     } else {
