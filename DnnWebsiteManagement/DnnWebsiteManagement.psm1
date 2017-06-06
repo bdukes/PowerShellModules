@@ -11,6 +11,14 @@ Pop-Location
 $defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
 if ($defaultDNNVersion -eq $null) { $defaultDNNVersion = '9.1.0' }
 
+$defaultIncludeSource = $env:DnnWebsiteManagement_DefaultIncludeSource
+if ($defaultIncludeSource -eq 'false') { $defaultIncludeSource = $false }
+elseif ($defaultIncludeSource -eq 'no') { $defaultIncludeSource = $false }
+elseif ($defaultIncludeSource -eq '0') { $defaultIncludeSource = $false }
+elseif ($defaultIncludeSource -eq '') { $defaultIncludeSource = $false }
+elseif ($defaultIncludeSource -eq $null) { $defaultIncludeSource = $false }
+else { $defaultIncludeSource = $true }
+
 $www = $env:www
 if ($www -eq $null) { $www = 'C:\inetpub\wwwroot' }
 
@@ -260,7 +268,7 @@ function Restore-DNNSite {
     [parameter(Mandatory=$false)]
     [string]$oldDomain = '',
     [parameter(Mandatory=$false)]
-    [switch]$includeSource = $false
+    [switch]$includeSource = $defaultIncludeSource
   );
 
   $siteZipFile = Get-Item $siteZip
@@ -300,7 +308,7 @@ function Upgrade-DNNSite {
     [string]$version = $defaultDNNVersion,
     [parameter(Mandatory=$false,position=2)]
     [DnnProduct]$product = [DnnProduct]::DnnPlatform,
-    [switch]$includeSource = $true
+    [switch]$includeSource = $defaultIncludeSource
   );
 
   Extract-Packages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -UseUpgradePackage
@@ -332,7 +340,7 @@ function New-DNNSite {
     [string]$version = $defaultDNNVersion,
     [parameter(Mandatory=$false,position=2)]
     [DnnProduct]$product = [DnnProduct]::DnnPlatform,
-    [switch]$includeSource = $true,
+    [switch]$includeSource = $defaultIncludeSource,
     [string]$objectQualifier = '',
     [string]$databaseOwner = 'dbo',
     [string]$siteZip = '',
@@ -622,7 +630,7 @@ function Extract-Packages {
     [string]$version,
     [parameter(Mandatory=$true,position=2)]
     [DnnProduct]$product = [DnnProduct]::DnnPlatform,
-    [switch]$includeSource = $true,
+    [switch]$includeSource = $defaultIncludeSource,
     [string]$siteZip = '',
     [switch]$useUpgradePackage
   );
