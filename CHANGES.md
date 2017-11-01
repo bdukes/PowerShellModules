@@ -1,4 +1,6 @@
 # Change Log
+ - Nov. 2017
+   - Added ability to generate HTTPS certificate with multiple domains in `SslWebBinding`
  - Oct. 2016
    - Added `Read-Choice` module
    - Added `Write-HtmlNode` module
