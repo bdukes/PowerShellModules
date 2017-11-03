@@ -362,7 +362,8 @@ function New-DNNSite {
   Write-Host "Creating IIS site"
   New-Website $siteName -HostHeader:$siteName -PhysicalPath:$www\$siteName\Website -ApplicationPool:$siteName
 
-  New-SslWebBinding $siteName
+  $domains = New-Object System.Collections.Generic.List[System.String]
+  $domains.Add($siteName)
 
   Write-Host "Setting modify permission on website files for IIS AppPool\$siteName"
   Set-ModifyPermission $www\$siteName\Website $siteName
@@ -430,10 +431,7 @@ function New-DNNSite {
                 Write-Verbose "IIS binding already exists for $aliasHost"
             }
 
-            $existingSslBinding = Get-WebBinding -Name:$siteName -HostHeader:$aliasHost -Port:443
-            if ($existingSslBinding -eq $null) {
-                New-SslWebBinding -siteName:$siteName -HostHeader:$aliasHost
-            }
+            $domains.Add($aliasHost)
         }
     }
 
@@ -496,6 +494,8 @@ function New-DNNSite {
   Invoke-Sqlcmd -Query:"CREATE USER [IIS AppPool\$siteName] FOR LOGIN [IIS AppPool\$siteName];" -Database:$siteName
   Write-Host "Adding SQL Server user to db_owner role"
   Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'IIS AppPool\$siteName';" -Database:$siteName
+
+  New-SslWebBinding $siteName $domains
 
   Write-Host "Launching https://$siteName"
   Start-Process -FilePath:https://$siteName
