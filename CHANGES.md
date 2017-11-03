@@ -1,13 +1,15 @@
 # Change Log
- - Nov. 2017
-   - Added ability to generate HTTPS certificate with multiple domains in `SslWebBinding`
- - Oct. 2016
-   - Added `Read-Choice` module
-   - Added `Write-HtmlNode` module
-   - Added `SslWebBinding` module
-   - Added `AdministratorRole` module
-   - Added `Add-HostFileEntry` module
-   - Added `ACL-Permissions` module
-   - Added `DnnWebsiteManagement` module
- - Aug. 2016
-   - Added `Recycle` module
+
+- Nov. 2017
+  - Added ability to generate HTTPS certificate with multiple domains in `SslWebBinding`
+  - When restoring DNN site in `DnnWebsiteManagement`, generate single HTTPS certificate
+- Oct. 2016
+  - Added `Read-Choice` module
+  - Added `Write-HtmlNode` module
+  - Added `SslWebBinding` module
+  - Added `AdministratorRole` module
+  - Added `Add-HostFileEntry` module
+  - Added `ACL-Permissions` module
+  - Added `DnnWebsiteManagement` module
+- Aug. 2016
+  - Added `Recycle` module
