@@ -90,10 +90,10 @@ function Remove-ItemSafely {
 }
 
 function Recycle-Item($Path) {
-    $item = Get-Item $Path
+    $item = Get-Item -LiteralPath $Path
     $directoryPath = Split-Path $item -Parent
     
-    $shell = new-object -comobject "Shell.Application"
+    $shell = New-Object -ComObject "Shell.Application"
     $shellFolder = $shell.Namespace($directoryPath)
     $shellItem = $shellFolder.ParseName($item.Name)
     $shellItem.InvokeVerb("delete")
