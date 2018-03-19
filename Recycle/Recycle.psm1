@@ -32,7 +32,7 @@ function Remove-ItemSafely {
         [pscredential]
         [System.Management.Automation.CredentialAttribute()]
         ${Credential},
-    
+
         [switch]
         $DeletePermanently)
 
@@ -57,7 +57,7 @@ function Remove-ItemSafely {
                     $scriptCmd = {& Recycle-Item -LiteralPath:$PSBoundParameters['LiteralPath'] }
                 } else {
                     $scriptCmd = {& Recycle-Item -Path:$PSBoundParameters['Path'] }
-            }
+                }
             }
 
             $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
@@ -106,17 +106,19 @@ function Recycle-Item {
     )
 
     if ($PSCmdlet.ParameterSetName -eq 'LiteralPath') {
-        $item = Get-Item -LiteralPath:$LiteralPath
+        $items = @(Get-Item -LiteralPath:$LiteralPath)
     } else {
-        $item = Get-Item -Path:$Path
+        $items = @(Get-Item -Path:$Path)
     }
 
-    $directoryPath = Split-Path $item -Parent
-    
-    $shell = New-Object -ComObject "Shell.Application"
-    $shellFolder = $shell.Namespace($directoryPath)
-    $shellItem = $shellFolder.ParseName($item.Name)
-    $shellItem.InvokeVerb("delete")
+    foreach ($item in $items) {
+        $directoryPath = Split-Path $item -Parent
+
+        $shell = New-Object -ComObject "Shell.Application"
+        $shellFolder = $shell.Namespace($directoryPath)
+        $shellItem = $shellFolder.ParseName($item.Name)
+        $shellItem.InvokeVerb("delete")
+    }
 }
 
 
