@@ -1,5 +1,9 @@
 # Change Log
 
+- Mar. 2018
+  - Recycle 1.1.0
+    - Added ability to remove files with special characters in path via `-LiteralPath` -parameter
+    - Added ability to remove multiple files by passing a glob, e.g. `Remove-ItemSafely -Path *.txt`
 - Nov. 2017
   - Added ability to generate HTTPS certificate with multiple domains in `SslWebBinding`
   - When restoring DNN site in `DnnWebsiteManagement`, generate single HTTPS certificate
