@@ -53,7 +53,11 @@ function Remove-ItemSafely {
                 Write-Verbose $PSCmdlet.ParameterSetName
                 Write-Verbose "Path is $($PSBoundParameters['Path'])"
                 Write-Verbose "Lit is $($PSBoundParameters['LiteralPath'])"
-                $scriptCmd = {& Recycle-Item -Path $PSBoundParameters[$PSCmdlet.ParameterSetName] }
+                if ($PSCmdlet.ParameterSetName -eq 'LiteralPath') {
+                    $scriptCmd = {& Recycle-Item -LiteralPath:$PSBoundParameters['LiteralPath'] }
+                } else {
+                    $scriptCmd = {& Recycle-Item -Path:$PSBoundParameters['Path'] }
+            }
             }
 
             $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
@@ -89,8 +93,24 @@ function Remove-ItemSafely {
 
 }
 
-function Recycle-Item($Path) {
-    $item = Get-Item -LiteralPath $Path
+function Recycle-Item {
+    param(
+        [Parameter(ParameterSetName='Path', Mandatory=$true, Position=0, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
+        [string[]]
+        ${Path},
+
+        [Parameter(ParameterSetName='LiteralPath', Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
+        [Alias('PSPath')]
+        [string[]]
+        ${LiteralPath}
+    )
+
+    if ($PSCmdlet.ParameterSetName -eq 'LiteralPath') {
+        $item = Get-Item -LiteralPath:$LiteralPath
+    } else {
+        $item = Get-Item -Path:$Path
+    }
+
     $directoryPath = Split-Path $item -Parent
     
     $shell = New-Object -ComObject "Shell.Application"
