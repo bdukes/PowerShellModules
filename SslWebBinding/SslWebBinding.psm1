@@ -18,6 +18,8 @@ function New-SslWebBinding {
     $hostHeader = @($siteName)
   }
 
+  $hostHeader = $hostHeader | Select-Object -Unique
+
   $existingBindings = @($hostHeader | Foreach-Object { Get-WebBinding -Name:$siteName -HostHeader:$_ -Protocol:https })
   if ($existingBindings.Length -eq $hostHeader.Length) {
     foreach ($existingBinding in $existingBindings) {
