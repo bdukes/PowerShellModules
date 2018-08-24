@@ -1,8 +1,11 @@
 # Change Log
 
+- August 2018
+  - Recycle 1.1.1
+    - Removed wildcard exports for increased performance and security
 - July 2018
   - SslWebBinding 1.1.1
-    - Remove duplicate host headers when generating binding and certificate
+    - Removed duplicate host headers when generating binding and certificate
 - Mar. 2018
   - Recycle 1.1.0
     - Added ability to remove files with special characters in path via `-LiteralPath` -parameter
