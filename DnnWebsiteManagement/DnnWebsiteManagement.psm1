@@ -8,10 +8,10 @@ Push-Location
 Import-Module SQLPS -DisableNameChecking
 Pop-Location
 
-$defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
+$defaultDNNVersion = $ModuleSettings.DefaultVersion # $env:DnnWebsiteManagement_DefaultVersion
 if ($defaultDNNVersion -eq $null) { $defaultDNNVersion = '9.1.0' }
 
-$defaultIncludeSource = $env:DnnWebsiteManagement_DefaultIncludeSource
+$defaultIncludeSource = $ModuleSettings.DefaultIncludeSource # $env:DnnWebsiteManagement_DefaultIncludeSource
 if ($defaultIncludeSource -eq 'false') { $defaultIncludeSource = $false }
 elseif ($defaultIncludeSource -eq 'no') { $defaultIncludeSource = $false }
 elseif ($defaultIncludeSource -eq '0') { $defaultIncludeSource = $false }
@@ -19,7 +19,7 @@ elseif ($defaultIncludeSource -eq '') { $defaultIncludeSource = $false }
 elseif ($defaultIncludeSource -eq $null) { $defaultIncludeSource = $false }
 else { $defaultIncludeSource = $true }
 
-$www = $env:www
+$www = $ModuleSettings.WebHome # $env:www
 if ($www -eq $null) { $www = 'C:\inetpub\wwwroot' }
 
 Add-Type -TypeDefinition @"
@@ -557,10 +557,10 @@ function getPackageName([System.Version]$version, [DnnProduct]$product) {
 function findPackagePath([System.Version]$version, [DnnProduct]$product, [string]$type) {
     $majorVersion = $version.Major
     switch ($product) {
-        DnnPlatform { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion"; break; }
-        EvoqContent { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content Basic"; break; }
-        EvoqContentEnterprise { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content"; break; }
-        EvoqEngage { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Engage"; break; }
+        DnnPlatform { $packagesFolder = "${ModuleSettings.DnnPackages}\DNN\Versions\DotNetNuke $majorVersion"; break; }
+        EvoqContent { $packagesFolder = "${ModuleSettings.DnnPackages}\DNN\Versions\Evoq Content Basic"; break; }
+        EvoqContentEnterprise { $packagesFolder = "${ModuleSettings.DnnPackages}\DNN\Versions\Evoq Content"; break; }
+        EvoqEngage { $packagesFolder = "${ModuleSettings.DnnPackages}\DNN\Versions\Evoq Engage"; break; }
     }
 
     $packageName = getPackageName $version $product
@@ -659,7 +659,8 @@ function Extract-Packages {
   $version = New-Object System.Version($version)
   Write-Verbose "Version is $version"
 
-  if ($env:soft -eq $null) {
+
+  if ($ModuleSettings.DnnPackages -eq $null) {
       throw 'You must set the environment variable `soft` to the path that contains your DNN install packages'
   }
 
@@ -877,6 +878,88 @@ function Watermark-Logos {
         & $cmd $subCmd -font Arial -pointsize 60 -draw "gravity Center fill #00ff00 text 0,0 $watermarkText" -draw "gravity NorthEast fill #ff00ff text 0,0 $watermarkText" -draw "gravity SouthWest fill #00ffff text 0,0 $watermarkText" -draw "gravity NorthWest fill #ff0000 text 0,0 $watermarkText" -draw "gravity SouthEast fill #0000ff text 0,0 $watermarkText" $logoFile
     }
 }
+
+#-------------------- Module Initialization -----------------------------
+
+# -----------------------------------------------------------------------
+# This is the initialization module script that completes
+# the settings initialization process. You can override the default
+# settings by passing either a file containing the appropriate 
+# settings in hashtable form as shown in ModuleSettings.ps1 or you
+# can pass in a hashtable with the appropriate settings directly.
+# -----------------------------------------------------------------------
+function WriteUsageInfo([string]$msg)
+{
+	if ($msg) { Write-Host $msg }
+	
+	Write-Host @"
+ 
+You can override individual settings by passing a hashtable with just those
+settings defined as shown below:
+
+    Import-Module DnnWebSiteManage -arg @{DefaultVersion = "9.2.2"}
+
+Any value not specified will be retrieved from the default settings built
+into the DNNWebsiteManagement module manifest.
+
+If you have a sufficiently large number of altered setting, copy the settings 
+file, modify it and pass the path to your settings file to Import-Module e.g.:
+
+    Import-Module DNNWebsiteManagement -arg "$(Split-Path $profile -parent)\
+        ModuleSettings.ps1"
+
+"@
+}
+
+function UpdateDefaultSettingsWithUserSettings([hashtable]$userSettings)
+{
+	# Walk the user specified settings and overwrite the defaults with them
+	foreach ($key in $userSettings.Keys)
+	{
+		if (!$ModuleSettings.ContainsKey($key))
+		{
+			Write-Warning "$key is not a recognized DnnWebsiteManagement setting"
+			continue
+		}
+
+		$ModuleSettings.$key = $userSettings.$key		
+	}
+}
+
+if ($Args.Length -gt 0) 
+{
+
+	if ($Args[0] -eq 'help') 
+	{
+		WriteUsageInfo
+		return	
+	}
+	elseif ($Args[0] -is [hashtable])
+	{
+		UpdateDefaultSettingsWithUserSettings $Args[0]
+	}
+	elseif (Test-Path $Args[0])
+	{
+		$userSettings = & $Args[0]	
+		if ($userSettings -isnot [hashtable]) 
+		{
+			WriteUsage "'$($args[0])' must return a hashtable instead of a $($userSettings.GetType().FullName)"
+			return
+		}
+
+		UpdateDefaultSettingsWithUserSettings $userSettings
+	}
+	else
+	{
+		WriteUsageInfo "'$($args[0])' is not recognized as either a hashtable or a valid path"
+		return		
+	}
+}	
+
+Remove-Item Function:\WriteUsageInfo
+Remove-Item Function:\UpdateDefaultSettingsWithUserSettings
+
+#---------------------------------------------------------------------------
 
 Export-ModuleMember Install-DNNResources
 Export-ModuleMember Remove-DNNSite
