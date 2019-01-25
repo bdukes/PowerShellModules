@@ -8,20 +8,6 @@ Push-Location
 Import-Module SQLPS -DisableNameChecking
 Pop-Location
 
-$defaultDNNVersion = $ModuleSettings.DefaultVersion # $env:DnnWebsiteManagement_DefaultVersion
-if ($defaultDNNVersion -eq $null) { $defaultDNNVersion = '9.1.0' }
-
-$defaultIncludeSource = $ModuleSettings.DefaultIncludeSource # $env:DnnWebsiteManagement_DefaultIncludeSource
-if ($defaultIncludeSource -eq 'false') { $defaultIncludeSource = $false }
-elseif ($defaultIncludeSource -eq 'no') { $defaultIncludeSource = $false }
-elseif ($defaultIncludeSource -eq '0') { $defaultIncludeSource = $false }
-elseif ($defaultIncludeSource -eq '') { $defaultIncludeSource = $false }
-elseif ($defaultIncludeSource -eq $null) { $defaultIncludeSource = $false }
-else { $defaultIncludeSource = $true }
-
-$www = $ModuleSettings.WebHome # $env:www
-if ($www -eq $null) { $www = 'C:\inetpub\wwwroot' }
-
 Add-Type -TypeDefinition @"
    public enum DnnProduct
    {
@@ -955,6 +941,20 @@ if ($Args.Length -gt 0)
 		return		
 	}
 }	
+
+$defaultDNNVersion = $ModuleSettings.DefaultVersion # $env:DnnWebsiteManagement_DefaultVersion
+if ($defaultDNNVersion -eq $null) { $defaultDNNVersion = '9.1.0' }
+
+$defaultIncludeSource = $ModuleSettings.DefaultIncludeSource # $env:DnnWebsiteManagement_DefaultIncludeSource
+if ($defaultIncludeSource -eq 'false') { $defaultIncludeSource = $false }
+elseif ($defaultIncludeSource -eq 'no') { $defaultIncludeSource = $false }
+elseif ($defaultIncludeSource -eq '0') { $defaultIncludeSource = $false }
+elseif ($defaultIncludeSource -eq '') { $defaultIncludeSource = $false }
+elseif ($defaultIncludeSource -eq $null) { $defaultIncludeSource = $false }
+else { $defaultIncludeSource = $true }
+
+$www = $ModuleSettings.WebHome # $env:www
+if ($www -eq $null) { $www = 'C:\inetpub\wwwroot' }
 
 Remove-Item Function:\WriteUsageInfo
 Remove-Item Function:\UpdateDefaultSettingsWithUserSettings
