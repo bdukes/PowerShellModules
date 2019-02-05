@@ -1,5 +1,5 @@
 #Requires -Version 3
-#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, PSCX
+#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding
 Set-StrictMode -Version:Latest
 
 Import-Module WebAdministration
@@ -9,7 +9,7 @@ Import-Module SQLPS -DisableNameChecking
 Pop-Location
 
 $defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
-if ($defaultDNNVersion -eq $null) { $defaultDNNVersion = '9.1.0' }
+if ($defaultDNNVersion -eq $null) { $defaultDNNVersion = '9.2.2' }
 
 $defaultIncludeSource = $env:DnnWebsiteManagement_DefaultIncludeSource
 if ($defaultIncludeSource -eq 'false') { $defaultIncludeSource = $false }
@@ -637,19 +637,20 @@ function Extract-Packages {
     [switch]$useUpgradePackage
   );
 
-  if ($version -eq '') {
-    Write-Verbose 'No version supplied'
-    if ($siteZip -ne '') {
-        if ((Get-Item $siteZip).PSIsContainer) {
-            $assemblyPath = "$siteZip\bin\DotNetNuke.dll"
-        } else {
-            Read-Archive $siteZip | Where-Object Path -match '\bbin\\DotNetNuke\.dll$' | Expand-Archive -OutputPath $env:TEMP -FlattenPaths -Force
-            $assemblyPath = "$env:TEMP\DotNetNuke.dll"
-        }
+  if ($siteZip -ne '') {
+      if (-not (Get-Item $siteZip).PSIsContainer) {
+          $siteZipOutput = "$www\$siteName\Extracted_Website"
+          Extract-Zip "$siteZipOutput" "$siteZip"
+          $siteZip = $siteZipOutput
+          $unzippedFiles = @(Get-ChildItem $siteZipOutput -Directory)
+          if ($unzippedFiles.Length -eq 1) {
+              $siteZip += "\$unzippedFiles"
+          }
+      }
 
-        $version = (Get-FileVersionInfo $assemblyPath).ProductVersion
-        Write-Verbose "Found version $version of DotNetNuke.dll"
-    }
+      $assemblyPath = "$siteZip\bin\DotNetNuke.dll"
+      $version = [Reflection.AssemblyName]::GetAssemblyName($assemblyPath).Version
+      Write-Verbose "Found version $version of DotNetNuke.dll"
   }
 
   if ($version -eq '') {

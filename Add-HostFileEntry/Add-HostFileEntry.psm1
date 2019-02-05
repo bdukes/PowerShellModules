@@ -12,10 +12,10 @@ function Add-HostFileEntry {
 
     $hostsLocation = "$env:windir\System32\drivers\etc\hosts";
     $hostsContent = Get-Content -Path $hostsLocation -Raw;
-    
+
     $ipRegex = [regex]::Escape($ipAddress);
     $hostRegex = [regex]::Escape($hostName);
-    
+
     $existingEntry = $hostsContent -match "(?:`n|\A)\s*$ipRegex\s+$hostRegex\s*(?:`n|\Z)";
     if(-not $existingEntry) {
         if ($hostsContent -notmatch "`n\s*$") {
@@ -50,12 +50,12 @@ function Remove-HostFileEntry {
     Assert-AdministratorRole;
 
     $hostsLocation = "$env:windir\System32\drivers\etc\hosts";
-    
+
     $ipRegex = [regex]::Escape($ipAddress);
     $hostRegex = [regex]::Escape($hostName);
 
     Write-Verbose -Message "Removing entry mapping $hostName to $ipAddress from $hostsLocation";
-    Edit-File -Path $hostsLocation -Pattern "(?:`n|\A)\s*$ipRegex\s+$hostRegex\s*(?:`n|\Z)" -Replacement "`n" -SingleString;
+    Get-Content -Path $hostsLocation -Raw | ForEach-Object { $_ -replace "(?:`n|\A)\s*$ipRegex\s+$hostRegex\s*(?:`n|\Z)", "`n" } | Set-Content -Path $hostsLocation;
 <#
 .SYNOPSIS
     Removes an entry from the HOSTS file
