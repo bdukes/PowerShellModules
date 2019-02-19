@@ -1,4 +1,5 @@
-﻿Import-Module $PsScriptRoot\Add-HostFileEntry.psd1
+﻿Import-Module $PsScriptRoot\AdministratorRole.psd1
+Import-Module $PsScriptRoot\Add-HostFileEntry.psd1
 
 Describe 'Add-HostFileEntry' {
     BeforeEach { $env:windir = 'TestDrive:' }
