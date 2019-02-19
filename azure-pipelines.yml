@@ -8,13 +8,16 @@ steps:
 - powershell: 'Install-Module Pester -Scope CurrentUser'
   displayName: 'Install Pester'
 
+- powershell: 'Get-ChildItem *.psd1 -Recurse | Import-Module'
+  displayName: 'Import Modules'
+
 - powershell: 'Invoke-Pester -OutputFile $(System.DefaultWorkingDirectory)/Test-Pester.XML -OutputFormat NUnitXML'
   displayName: 'Run tests'
 
 - task: PublishTestResults@2
   inputs:
     testResultsFormat: 'NUnit'
-    testResultsFiles: 'Test-Pester.XML' 
+    testResultsFiles: 'Test-Pester.XML'
     searchFolder: '$(System.DefaultWorkingDirectory)'
     failTaskOnFailedTests: true
   displayName: 'Publish test results'
