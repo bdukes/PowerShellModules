@@ -1,4 +1,4 @@
-﻿Import-Module Add-HostFileEntry
+﻿Import-Module $PsScriptRoot\Add-HostFileEntry.psd1
 
 Describe 'Add-HostFileEntry' {
     BeforeEach { $env:windir = 'TestDrive:' }
