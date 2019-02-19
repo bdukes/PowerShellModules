@@ -8,7 +8,7 @@ steps:
 - powershell: 'Install-Module Pester -Scope CurrentUser'
   displayName: 'Install Pester'
 
-- powershell: 'Get-ChildItem *.psd1 -Recurse | Import-Module'
+- powershell: 'Get-ChildItem *.psd1 -Recurse | Import-Module -ErrorAction Continue'
   displayName: 'Import Modules'
 
 - powershell: 'Invoke-Pester -OutputFile $(System.DefaultWorkingDirectory)/Test-Pester.XML -OutputFormat NUnitXML'
