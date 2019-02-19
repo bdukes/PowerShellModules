@@ -1,5 +1,10 @@
 # Change Log
 
+- February 2019
+  - Add-HostFileEntry 1.0.2
+    - Removed (hidden) dependency on PSCX
+  - DnnWebsiteManagement 1.2.1
+    - Removed dependency on PSCX
 - August 2018
   - Recycle 1.1.1
     - Removed wildcard exports for increased performance and security
