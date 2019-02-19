@@ -55,7 +55,8 @@ function Remove-HostFileEntry {
     $hostRegex = [regex]::Escape($hostName);
 
     Write-Verbose -Message "Removing entry mapping $hostName to $ipAddress from $hostsLocation";
-    Get-Content -Path $hostsLocation -Raw | ForEach-Object { $_ -replace "(?:`n|\A)\s*$ipRegex\s+$hostRegex\s*(?:`n|\Z)", "`n" } | Set-Content -Path $hostsLocation;
+    $hostFileContent = Get-Content -Path $hostsLocation -Raw | ForEach-Object { $_ -replace "(?:`n|\A)\s*$ipRegex\s+$hostRegex\s*(?:`n|\Z)", "`n" };
+    Set-Content -Path $hostsLocation -Value $hostFileContent;
 <#
 .SYNOPSIS
     Removes an entry from the HOSTS file
