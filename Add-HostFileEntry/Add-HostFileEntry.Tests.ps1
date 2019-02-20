@@ -13,7 +13,7 @@ Describe 'Add-HostFileEntry' {
         Add-HostFileEntry test.test
 
         It 'Adds host file entry' {
-            'TestDrive:\System32\drivers\etc\hosts' | Should Contain '127\.0\.0\.1\s+test\.test'
+            'TestDrive:\System32\drivers\etc\hosts' | Should -FileContentMatch '^127\.0\.0\.1\s+test\.test$'
         }
     }
 
@@ -26,7 +26,7 @@ Describe 'Add-HostFileEntry' {
         Add-HostFileEntry test.test
 
         It 'Adds host file entry' {
-            'TestDrive:\System32\drivers\etc\hosts' | Should Contain '127\.0\.0\.1\s+test\.test'
+            'TestDrive:\System32\drivers\etc\hosts' | Should -FileContentMatch '^127\.0\.0\.1\s+test\.test$'
         }
     }
 }
@@ -43,7 +43,7 @@ Describe 'Remove-HostFileEntry' {
         Remove-HostFileEntry example.example
 
         It 'Removes host file entry' {
-            'TestDrive:\System32\drivers\etc\hosts' | Should Not Contain '127\.0\.0\.1\s+example\.example'
+            'TestDrive:\System32\drivers\etc\hosts' | Should -Not -FileContentMatch '^127\.0\.0\.1\s+example\.example$'
         }
     }
 
@@ -56,7 +56,7 @@ Describe 'Remove-HostFileEntry' {
         Remove-HostFileEntry test.test
 
         It 'Leaves empty host file' {
-            'TestDrive:\System32\drivers\etc\hosts' | Should Not Contain '.*'
+            'TestDrive:\System32\drivers\etc\hosts' | Should -Not -FileContentMatchMultiline '.*'
         }
     }
 }
