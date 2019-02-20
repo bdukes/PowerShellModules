@@ -5,7 +5,7 @@ pool:
   vmImage: 'vs2017-win2016'
 
 steps:
-- powershell: 'Install-Module Pester -Scope CurrentUser'
+- powershell: 'Install-Module Pester -Scope CurrentUser -Force'
   displayName: 'Install Pester'
 
 - powershell: 'Invoke-Pester -OutputFile $(System.DefaultWorkingDirectory)/Test-Pester.XML -OutputFormat NUnitXML'
