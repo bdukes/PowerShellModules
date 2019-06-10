@@ -608,8 +608,7 @@ function Extract-Zip {
             Write-Warning "Error extracting $zipFile, opening 7-Zip output"
           }
 
-          Edit-File $outputFile
-          Start-Sleep -s 1 #sleep for one second to make sure notepad has enough time to open the file before it's deleted
+          Write-Warning (Get-Content $outputFile)
         }
       }
       finally {
