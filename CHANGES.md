@@ -1,5 +1,12 @@
 # Change Log
 
+- June 2019
+  - DnnWebsiteManagement 1.2.4
+    - Fix bugs extracting package and viewing zip error output
+  - DnnWebsiteManagement 1.2.3
+    - Fix failure to clean up extracted files after restore
+  - DnnWebsiteManagement 1.2.2
+    - Removed (hidden) dependency on PSCX
 - February 2019
   - Add-HostFileEntry 1.0.2
     - Removed (hidden) dependency on PSCX

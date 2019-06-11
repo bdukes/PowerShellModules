@@ -608,7 +608,10 @@ function Extract-Zip {
             Write-Warning "Error extracting $zipFile, opening 7-Zip output"
           }
 
-          Write-Warning (Get-Content $outputFile)
+          $zipLogOutput = Get-Content $outputFile;
+          if ($zipLogOutput) {
+            Write-Warning $zipLogOutput
+          }
         }
       }
       finally {
@@ -636,8 +639,9 @@ function Extract-Packages {
     [switch]$useUpgradePackage
   );
 
+  $siteZipOutput = $null;
   if ($siteZip -ne '') {
-      if (-not (Get-Item $siteZip).PSIsContainer) {
+      if (Test-Path $siteZip -PathType Leaf) {
           $siteZipOutput = "$www\$siteName\Extracted_Website"
           Extract-Zip "$siteZipOutput" "$siteZip"
           $siteZip = $siteZipOutput
@@ -651,6 +655,9 @@ function Extract-Packages {
       $version = [Reflection.AssemblyName]::GetAssemblyName($assemblyPath).Version
       Write-Verbose "Found version $version of DotNetNuke.dll"
   }
+  elseif ($env:soft -eq $null) {
+    throw 'You must set the environment variable `soft` to the path that contains your DNN install packages'
+  }
 
   if ($version -eq '') {
     $version = $defaultDNNVersion
@@ -658,10 +665,6 @@ function Extract-Packages {
 
   $version = New-Object System.Version($version)
   Write-Verbose "Version is $version"
-
-  if ($env:soft -eq $null) {
-      throw 'You must set the environment variable `soft` to the path that contains your DNN install packages'
-  }
 
   if ($includeSource -eq $true) {
     Write-Host "Extracting DNN $version source"
@@ -718,23 +721,16 @@ function Extract-Packages {
     Break
   }
 
-  if ((Get-Item $siteZip).PSIsContainer) {
-    $from = $siteZip
-    $siteZipOutput = $null
-  } else {
+  if (Test-Path $siteZip -PathType Leaf) {
     $siteZipOutput = "$www\$siteName\Extracted_Website"
     Extract-Zip "$siteZipOutput" "$siteZip"
-
-    $from = $siteZipOutput
-    $unzippedFiles = @(Get-ChildItem $siteZipOutput)
-    if ($unzippedFiles.Length -eq 1) {
-      $from += "\$unzippedFiles"
-    }
+    $siteZip = $siteZipOutput
   }
 
-  # add * only if the directory already exists, based on https://groups.google.com/d/msg/microsoft.public.windows.powershell/iTEakZQQvh0/TLvql_87yzgJ
   $to = "$www\$siteName\Website"
-  $from += '/'
+  $from = "$siteZip/"
+
+  # add * only if the directory already exists, based on https://groups.google.com/d/msg/microsoft.public.windows.powershell/iTEakZQQvh0/TLvql_87yzgJ
   if (Test-Path $to -PathType Container) { $from += '*' }
   Copy-Item $from $to -Force -Recurse
 
