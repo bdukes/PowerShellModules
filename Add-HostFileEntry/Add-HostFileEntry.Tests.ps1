@@ -59,4 +59,19 @@ Describe 'Remove-HostFileEntry' {
             'TestDrive:\System32\drivers\etc\hosts' | Should -Not -FileContentMatchMultiline '.*'
         }
     }
+
+    Context 'Three Hosts' {
+
+        Mock -ModuleName Add-HostFileEntry Assert-AdministratorRole {}
+        mkdir TestDrive:\System32\drivers\etc
+        cp $PsScriptRoot\fixtures\three-hosts.hosts TestDrive:\System32\drivers\etc\hosts
+
+        Remove-HostFileEntry two.example
+
+        It 'Leaves two hosts' {
+            'TestDrive:\System32\drivers\etc\hosts' | Should -Not -FileContentMatch '^127\.0\.0\.1\s+two\.example$'
+            'TestDrive:\System32\drivers\etc\hosts' | Should -FileContentMatch '^127\.0\.0\.1\s+one\.example$'
+            'TestDrive:\System32\drivers\etc\hosts' | Should -FileContentMatch '^127\.0\.0\.1\s+three\.example$'
+        }
+    }
 }
