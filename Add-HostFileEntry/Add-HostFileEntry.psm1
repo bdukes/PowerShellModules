@@ -58,7 +58,7 @@ function Remove-HostFileEntry {
     $oldHostsContent = Get-Content -Path $hostsLocation -Raw
     $newHostsFileContent = $oldHostsContent | ForEach-Object { $_ -replace "(?:`n|\A)\s*$ipRegex\s+$hostRegex\s*(?:`n|\Z)", "`n" };
 
-    Set-Content -Path $hostsLocation -Value $newHostsFileContent;
+    [System.IO.File]::WriteAllText($hostsLocation, $newHostsFileContent)
 <#
 .SYNOPSIS
     Removes an entry from the HOSTS file
