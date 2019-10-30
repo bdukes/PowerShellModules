@@ -1,5 +1,8 @@
 # Change Log
 
+- October 2019
+  - BindingRedirects 0.1.0
+    - Initial version
 - June 2019
   - DnnWebsiteManagement 1.2.4
     - Fix bugs extracting package and viewing zip error output
