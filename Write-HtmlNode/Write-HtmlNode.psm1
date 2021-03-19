@@ -8,41 +8,41 @@ function Write-HtmlNode($node, $indent = '', [switch]$excludeAttributes, [switch
         return
     }
 
-    Write-Output $indent -NoNewline
+    Write-Host $indent
     if ($node.nodeName -eq '#text') {
-        Write-Output $node.nodeValue -ForegroundColor White
+        Write-Host $node.nodeValue -ForegroundColor White
         return
     }
     elseif ($node.nodeName -eq '#comment') {
-        Write-Output $node.OuterHtml -ForegroundColor DarkGreen
+        Write-Host $node.OuterHtml -ForegroundColor DarkGreen
         return
     }
-    Write-Output '<' -NoNewline -ForegroundColor Gray
-    Write-Output $node.nodeName -NoNewline -ForegroundColor Blue
+    Write-Host '<' -NoNewline -ForegroundColor Gray
+    Write-Host $node.nodeName -NoNewline -ForegroundColor Blue
     if ($excludeAttributes -eq $false) {
         foreach ($attr in ($node.attributes | Where-Object { $_.Specified })) {
-            Write-Output ' ' -NoNewline
-            Write-Output $attr.name -NoNewline -ForegroundColor Magenta
-            Write-Output '="' -NoNewline -ForegroundColor Gray
-            Write-Output $attr.value -NoNewline -ForegroundColor Yellow
-            Write-Output '"' -NoNewline -ForegroundColor Gray
+            Write-Host ' ' -NoNewline
+            Write-Host $attr.name -NoNewline -ForegroundColor Magenta
+            Write-Host '="' -NoNewline -ForegroundColor Gray
+            Write-Host $attr.value -NoNewline -ForegroundColor Yellow
+            Write-Host '"' -NoNewline -ForegroundColor Gray
         }
     }
     if ($node.canHaveChildren -eq $false) {
-        Write-Output ' />' -ForegroundColor Gray
+        Write-Host ' />' -ForegroundColor Gray
         return
     }
-    Write-Output '>' -ForegroundColor Gray
+    Write-Host '>' -ForegroundColor Gray
     $child = $node.firstChild
     $childIndent = $indent + '  '
     while ($null -ne $child) {
         write-htmlNode $child $childIndent -excludeAttributes:$excludeAttributes -excludeEmptyElements:$excludeEmptyElements -excludeComments:$excludeComments
         $child = $child.nextSibling
     }
-    Write-Output $indent -NoNewline
-    Write-Output '</' -NoNewline -ForegroundColor Gray
-    Write-Output $node.nodeName -NoNewline -ForegroundColor Blue
-    Write-Output '>' -ForegroundColor Gray
+    Write-Host $indent -NoNewline
+    Write-Host '</' -NoNewline -ForegroundColor Gray
+    Write-Host $node.nodeName -NoNewline -ForegroundColor Blue
+    Write-Host '>' -ForegroundColor Gray
     <#
 .SYNOPSIS
     Writes the given HTML node with color
