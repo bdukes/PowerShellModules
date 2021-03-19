@@ -53,11 +53,13 @@ function Remove-ItemSafely {
                 Write-Verbose "Path is $($PSBoundParameters['Path'])"
                 Write-Verbose "Lit is $($PSBoundParameters['LiteralPath'])"
                 if ($PSCmdlet.ParameterSetName -eq 'LiteralPath') {
-                    $scriptCmd = { & Recycle-Item -LiteralPath:$PSBoundParameters['LiteralPath'] }
+                    $items = @(Get-Item -LiteralPath:$PSBoundParameters['LiteralPath'])
                 }
                 else {
-                    $scriptCmd = { & Recycle-Item -Path:$PSBoundParameters['Path'] }
+                    $items = @(Get-Item -Path:$PSBoundParameters['Path'])
                 }
+
+                $scriptCmd = { & { foreach ($item in $items) { if ($PSCmdlet.ShouldProcess($item)) { recycleItem $item } } } }
             }
 
             $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
@@ -94,33 +96,14 @@ function Remove-ItemSafely {
 
 }
 
-function Recycle-Item {
-    param(
-        [Parameter(ParameterSetName = 'Path', Mandatory = $true, Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-        [string[]]
-        ${Path},
+function recycleItem {
+    param($item)
+    $directoryPath = Split-Path $item -Parent
 
-        [Parameter(ParameterSetName = 'LiteralPath', Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [Alias('PSPath')]
-        [string[]]
-        ${LiteralPath}
-    )
-
-    if ($PSCmdlet.ParameterSetName -eq 'LiteralPath') {
-        $items = @(Get-Item -LiteralPath:$LiteralPath)
-    }
-    else {
-        $items = @(Get-Item -Path:$Path)
-    }
-
-    foreach ($item in $items) {
-        $directoryPath = Split-Path $item -Parent
-
-        $shell = New-Object -ComObject "Shell.Application"
-        $shellFolder = $shell.Namespace($directoryPath)
-        $shellItem = $shellFolder.ParseName($item.Name)
-        $shellItem.InvokeVerb("delete")
-    }
+    $shell = New-Object -ComObject "Shell.Application"
+    $shellFolder = $shell.Namespace($directoryPath)
+    $shellItem = $shellFolder.ParseName($item.Name)
+    $shellItem.InvokeVerb("delete")
 }
 
 
