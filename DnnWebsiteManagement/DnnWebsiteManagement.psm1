@@ -92,45 +92,45 @@ function Remove-DNNSite {
       }
     }
 
-    Write-Host "Removing $siteName website from IIS"
+    Write-Information "Removing $siteName website from IIS"
     Remove-Website $siteName
   }
   else {
-    Write-Host "$siteName website not found in IIS"
+    Write-Information "$siteName website not found in IIS"
   }
 
   if (Test-Path IIS:\AppPools\$siteName) {
-    Write-Host "Removing $siteName app pool from IIS"
+    Write-Information "Removing $siteName app pool from IIS"
     Remove-WebAppPool $siteName
   }
   else {
-    Write-Host "$siteName app pool not found in IIS"
+    Write-Information "$siteName app pool not found in IIS"
   }
 
   if (Test-Path $www\$siteName) {
-    Write-Host "Deleting $www\$siteName"
+    Write-Information "Deleting $www\$siteName"
     Remove-Item $www\$siteName -Recurse -Force
   }
   else {
-    Write-Host "$www\$siteName does not exist"
+    Write-Information "$www\$siteName does not exist"
   }
 
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(Encode-SQLName $siteName)") {
-    Write-Host "Closing connections to $siteName database"
+    Write-Information "Closing connections to $siteName database"
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
-    Write-Host "Dropping $siteName database"
+    Write-Information "Dropping $siteName database"
     Invoke-Sqlcmd -Query:"DROP DATABASE [$siteName];" -ServerInstance:. -Database:master
   }
   else {
-    Write-Host "$siteName database not found"
+    Write-Information "$siteName database not found"
   }
 
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$siteName")") {
-    Write-Host "Dropping IIS AppPool\$siteName database login"
+    Write-Information "Dropping IIS AppPool\$siteName database login"
     Invoke-Sqlcmd -Query:"DROP LOGIN [IIS AppPool\$siteName];" -Database:master
   }
   else {
-    Write-Host "IIS AppPool\$siteName database login not found"
+    Write-Information "IIS AppPool\$siteName database login not found"
   }
 
   #TODO: remove all host entries added during restore
@@ -164,11 +164,11 @@ function Rename-DNNSite {
   }
 
   if (Test-Path $www\$oldSiteName) {
-    Write-Host "Renaming $www\$oldSiteName to $newSiteName"
+    Write-Information "Renaming $www\$oldSiteName to $newSiteName"
     Rename-Item $www\$oldSiteName $newSiteName
   }
   else {
-    Write-Host "$www\$oldSiteName does not exist"
+    Write-Information "$www\$oldSiteName does not exist"
   }
 
   Set-ItemProperty IIS:\Sites\$oldSiteName -Name PhysicalPath -Value $www\$newSiteName\Website
@@ -176,41 +176,41 @@ function Rename-DNNSite {
   New-WebBinding -Name:$oldSiteName -IP:'*' -Port:80 -Protocol:'http' -HostHeader:$newSiteName
 
   if (Test-Path IIS:\Sites\$oldSiteName) {
-    Write-Host "Renaming $oldSiteName website in IIS to $newSiteName"
+    Write-Information "Renaming $oldSiteName website in IIS to $newSiteName"
     Rename-Item IIS:\Sites\$oldSiteName $newSiteName
   }
   else {
-    Write-Host "$oldSiteName website not found in IIS"
+    Write-Information "$oldSiteName website not found in IIS"
   }
 
   if (Test-Path IIS:\AppPools\$oldSiteName) {
-    Write-Host "Renaming $oldSiteName app pool in IIS to $newSiteName"
+    Write-Information "Renaming $oldSiteName app pool in IIS to $newSiteName"
     Rename-Item IIS:\AppPools\$oldSiteName $newSiteName
   }
   else {
-    Write-Host "$oldSiteName app pool not found in IIS"
+    Write-Information "$oldSiteName app pool not found in IIS"
   }
 
   Set-ItemProperty IIS:\Sites\$newSiteName -Name ApplicationPool -Value $newSiteName
 
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(Encode-SQLName $oldSiteName)") {
-    Write-Host "Closing connections to $oldSiteName database"
+    Write-Information "Closing connections to $oldSiteName database"
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$oldSiteName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
-    Write-Host "Renaming $oldSiteName database to $newSiteName"
+    Write-Information "Renaming $oldSiteName database to $newSiteName"
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$oldSiteName] MODIFY NAME = [$newSiteName];" -ServerInstance:. -Database:master
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$newSiteName] SET MULTI_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
   }
   else {
-    Write-Host "$oldSiteName database not found"
+    Write-Information "$oldSiteName database not found"
   }
 
   if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$newSiteName")")) {
-    Write-Host "Creating SQL Server login for IIS AppPool\$newSiteName"
+    Write-Information "Creating SQL Server login for IIS AppPool\$newSiteName"
     Invoke-Sqlcmd -Query:"CREATE LOGIN [IIS AppPool\$newSiteName] FROM WINDOWS WITH DEFAULT_DATABASE = [$newSiteName];" -Database:master
   }
-  Write-Host "Creating SQL Server user"
+  Write-Information "Creating SQL Server user"
   Invoke-Sqlcmd -Query:"CREATE USER [IIS AppPool\$newSiteName] FOR LOGIN [IIS AppPool\$newSiteName];" -Database:$newSiteName
-  Write-Host "Adding SQL Server user to db_owner role"
+  Write-Information "Adding SQL Server user to db_owner role"
   Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'IIS AppPool\$newSiteName';" -Database:$newSiteName
 
   $ownedRoles = Invoke-SqlCmd -Query:"SELECT p2.name FROM sys.database_principals p1 JOIN sys.database_principals p2 ON p1.principal_id = p2.owning_principal_id WHERE p1.name = 'IIS AppPool\$oldSiteName';" -Database:$newSiteName
@@ -222,11 +222,11 @@ function Rename-DNNSite {
   Invoke-Sqlcmd -Query:"DROP USER [IIS AppPool\$oldSiteName];" -Database:$newSiteName
 
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$oldSiteName")") {
-    Write-Host "Dropping IIS AppPool\$oldSiteName database login"
+    Write-Information "Dropping IIS AppPool\$oldSiteName database login"
     Invoke-Sqlcmd -Query:"DROP LOGIN [IIS AppPool\$oldSiteName];" -Database:master
   }
   else {
-    Write-Host "IIS AppPool\$oldSiteName database login not found"
+    Write-Information "IIS AppPool\$oldSiteName database login not found"
   }
 
   Set-ModifyPermission $www\$newSiteName\Website $newSiteName
@@ -246,7 +246,7 @@ function Rename-DNNSite {
 
   Start-WebAppPool $newSiteName
 
-  Write-Host "Launching https://$newSiteName"
+  Write-Information "Launching https://$newSiteName"
   Start-Process -FilePath:https://$newSiteName
 
   <#
@@ -319,7 +319,7 @@ function Upgrade-DNNSite {
 
   Extract-Packages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -UseUpgradePackage
 
-  Write-Host "Launching https://$siteName/Install/Install.aspx?mode=upgrade"
+  Write-Information "Launching https://$siteName/Install/Install.aspx?mode=upgrade"
   Start-Process -FilePath:https://$siteName/Install/Install.aspx?mode=upgrade
 
   <#
@@ -360,28 +360,28 @@ function New-DNNSite {
   if ($siteNameExtension -eq '') { $siteNameExtension = '.local' }
   Extract-Packages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -SiteZip:$siteZip
 
-  Write-Host "Creating HOSTS file entry for $siteName"
+  Write-Information "Creating HOSTS file entry for $siteName"
   Add-HostFileEntry $siteName
 
-  Write-Host "Creating IIS app pool"
+  Write-Information "Creating IIS app pool"
   New-WebAppPool $siteName
-  Write-Host "Creating IIS site"
+  Write-Information "Creating IIS site"
   New-Website $siteName -HostHeader:$siteName -PhysicalPath:$www\$siteName\Website -ApplicationPool:$siteName
 
   $domains = New-Object System.Collections.Generic.List[System.String]
   $domains.Add($siteName)
 
-  Write-Host "Setting modify permission on website files for IIS AppPool\$siteName"
+  Write-Information "Setting modify permission on website files for IIS AppPool\$siteName"
   Set-ModifyPermission $www\$siteName\Website $siteName
 
   [xml]$webConfig = Get-Content $www\$siteName\Website\web.config
   if ($databaseBackup -eq '') {
-    Write-Host "Creating new database"
+    Write-Information "Creating new database"
     New-DNNDatabase $siteName
     # TODO: create schema if $databaseOwner has been passed in
   }
   else {
-    Write-Host "Restoring database"
+    Write-Information "Restoring database"
     Restore-DNNDatabase $siteName (Get-Item $databaseBackup).FullName
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET RECOVERY SIMPLE"
 
@@ -389,7 +389,7 @@ function New-DNNSite {
     $databaseOwner = $webConfig.configuration.dotnetnuke.data.providers.add.databaseOwner.TrimEnd('.')
 
     if ($oldDomain -ne '') {
-      Write-Host "Updating portal aliases"
+      Write-Information "Updating portal aliases"
       Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'PortalAlias' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$oldDomain', '$siteName')" -Database:$siteName
       Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = REPLACE(SettingValue, '$oldDomain', '$siteName') WHERE SettingName = 'DefaultPortalAlias'" -Database:$siteName
 
@@ -452,39 +452,39 @@ function New-DNNSite {
     }
     $catalookSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(Encode-SQLName $siteName)\Tables\$databaseOwner.${oq}CAT_Settings"
     if (Test-Path $catalookSettingsTablePath) {
-      Write-Host "Setting Catalook to test mode"
+      Write-Information "Setting Catalook to test mode"
       Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'CAT_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$siteName
     }
 
     if (Test-Path $www\$siteName\Website\DesktopModules\EngageSports) {
-      Write-Host 'Updating Engage: Sports wizard URLs'
+      Write-Information 'Updating Engage: Sports wizard URLs'
       Update-WizardUrls $siteName
     }
 
-    Write-Host "Setting SMTP to localhost"
+    Write-Information "Setting SMTP to localhost"
     Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$siteName
     Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$siteName
     Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$siteName
     Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$siteName
     Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$siteName
 
-    Write-Host 'Clearing WebServers table'
+    Write-Information 'Clearing WebServers table'
     Invoke-Sqlcmd -Query:"TRUNCATE TABLE $(Get-DNNDatabaseObjectName -objectName:'WebServers' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier)" -Database:$siteName
 
-    Write-Host "Turning off event log buffer"
+    Write-Information "Turning off event log buffer"
     Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'EventLogBuffer'" -Database:$siteName
 
-    Write-Host "Turning off search crawler"
+    Write-Information "Turning off search crawler"
     Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName -objectName:'Schedule' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET Enabled = 0 WHERE TypeFullName = 'DotNetNuke.Professional.SearchCrawler.SearchSpider.SearchSpider, DotNetNuke.Professional.SearchCrawler'" -Database:$siteName
 
-    Write-Host "Setting all passwords to 'pass'"
+    Write-Information "Setting all passwords to 'pass'"
     Invoke-Sqlcmd -Query:"UPDATE aspnet_Membership SET PasswordFormat = 0, Password = 'pass'" -Database:$siteName
 
-    Write-Host "Watermarking site logo(s)"
+    Write-Information "Watermarking site logo(s)"
     Watermark-Logos $siteName $siteNameExtension
 
     if (Test-Path "$www\$siteName\Website\ApplicationInsights.config") {
-      Write-Host "Remove Application Insights config"
+      Write-Information "Remove Application Insights config"
       Remove-Item "$www\$siteName\Website\ApplicationInsights.config"
     }
   }
@@ -493,26 +493,26 @@ function New-DNNSite {
   $webConfig.configuration.connectionStrings.add | Where-Object { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $connectionString }
   $webConfig.configuration.appSettings.add | Where-Object { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }
 
-  Write-Host "Updating web.config with connection string and data provider attributes"
+  Write-Information "Updating web.config with connection string and data provider attributes"
   $webConfig.configuration.dotnetnuke.data.providers.add | Where-Object { $_.name -eq 'SqlDataProvider' } | ForEach-Object { $_.objectQualifier = $objectQualifier; $_.databaseOwner = $databaseOwner }
-  Write-Host "Updating web.config to allow short passwords"
+  Write-Information "Updating web.config to allow short passwords"
   $webConfig.configuration['system.web'].membership.providers.add | Where-Object { $_.type -eq 'System.Web.Security.SqlMembershipProvider' } | ForEach-Object { $_.minRequiredPasswordLength = '4' }
-  Write-Host "Updating web.config to turn on debug mode"
+  Write-Information "Updating web.config to turn on debug mode"
   $webConfig.configuration['system.web'].compilation.debug = 'true'
   $webConfig.Save("$www\$siteName\Website\web.config")
 
   if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$siteName")")) {
-    Write-Host "Creating SQL Server login for IIS AppPool\$siteName"
+    Write-Information "Creating SQL Server login for IIS AppPool\$siteName"
     Invoke-Sqlcmd -Query:"CREATE LOGIN [IIS AppPool\$siteName] FROM WINDOWS WITH DEFAULT_DATABASE = [$siteName];" -Database:master
   }
-  Write-Host "Creating SQL Server user"
+  Write-Information "Creating SQL Server user"
   Invoke-Sqlcmd -Query:"CREATE USER [IIS AppPool\$siteName] FOR LOGIN [IIS AppPool\$siteName];" -Database:$siteName
-  Write-Host "Adding SQL Server user to db_owner role"
+  Write-Information "Adding SQL Server user to db_owner role"
   Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'IIS AppPool\$siteName';" -Database:$siteName
 
   New-SslWebBinding $siteName $domains
 
-  Write-Host "Launching https://$siteName"
+  Write-Information "Launching https://$siteName"
   Start-Process -FilePath:https://$siteName
 
   <#
@@ -690,7 +690,7 @@ function Extract-Packages {
   Write-Verbose "Version is $version"
 
   if ($includeSource -eq $true) {
-    Write-Host "Extracting DNN $version source"
+    Write-Information "Extracting DNN $version source"
     $sourcePath = findPackagePath -version:$version -product:$product -type:'Source'
     Write-Verbose "Source Path is $sourcePath"
     if ($null -eq $sourcePath -or $sourcePath -eq '' -or -not (Test-Path $sourcePath)) {
@@ -703,7 +703,7 @@ function Extract-Packages {
       Remove-Item "$www\$siteName\Platform\" -Force -Recurse
     }
 
-    Write-Host "Copying DNN $version source symbols into install directory"
+    Write-Information "Copying DNN $version source symbols into install directory"
     $symbolsPath = findPackagePath -version:$version -product:$product -type:'Symbols'
     Write-Verbose "Symbols Path is $sourcePath"
     if ($null -eq $symbolsPath -or $symbolsPath -eq '' -or -not (Test-Path $symbolsPath)) {
@@ -712,7 +712,7 @@ function Extract-Packages {
     Write-Verbose "cp $symbolsPath $www\$siteName\Website\Install\Module"
     Copy-Item $symbolsPath $www\$siteName\Website\Install\Module
 
-    Write-Host "Updating site URL in sln files"
+    Write-Information "Updating site URL in sln files"
     Get-ChildItem $www\$siteName\*.sln | ForEach-Object {
       $slnContent = (Get-Content $_);
       $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Community"', "`"https://$siteName`"";
@@ -740,7 +740,7 @@ function Extract-Packages {
   }
 
   $siteZip = (Get-Item $siteZip).FullName
-  Write-Host "Extracting DNN site"
+  Write-Information "Extracting DNN site"
   if (-not (Test-Path $siteZip)) {
     Write-Error "Site package does not exist" -Category:ObjectNotFound -CategoryActivity:"Extract DNN site" -CategoryTargetName:$siteZip -TargetObject:$siteZip -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
     Break
@@ -838,7 +838,7 @@ function Restore-DNNDatabase {
     $dbRestore.SqlRestore($server)
   }
   catch [System.Exception] {
-    write-host $_.Exception
+    Write-Output $_.Exception
   }
 }
 

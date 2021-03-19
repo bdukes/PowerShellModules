@@ -37,7 +37,7 @@ function New-SslWebBinding {
     }
 
     foreach ($domain in $hostHeader) {
-      Write-Host "Adding binding for https://$domain to $siteName"
+      Write-Information "Adding binding for https://$domain to $siteName"
       New-WebBinding -Name:$siteName -HostHeader:$domain -Protocol:https -SslFlags:1
     }
   }
@@ -62,7 +62,7 @@ function New-SslWebBinding {
       New-Item -Path:"IIS:\SslBindings\!443!$domain" -Value:$cert -SSLFlags:1
     }
 
-    Write-Host "Trusting generated SSL certificate for $hostHeader" #based on https://stackoverflow.com/a/21001534
+    Write-Information "Trusting generated SSL certificate for $hostHeader" #based on https://stackoverflow.com/a/21001534
     $store = New-Object System.Security.Cryptography.X509Certificates.X509Store 'Root', 'CurrentUser'
     $store.Open('ReadWrite')
     $store.Add($cert)
