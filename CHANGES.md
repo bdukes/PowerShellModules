@@ -3,6 +3,8 @@
 - March 2021
   - DnnWebsiteManagement 1.3.0
     - Remove Application Insights config when restoring
+  - Recycle 1.2.0
+    - Add ShouldProcess (i.e. -WhatIf and -Confirm) support
 - October 2019
   - BindingRedirects 0.1.0
     - Initial version
