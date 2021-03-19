@@ -9,7 +9,7 @@ function Read-Choice {
   );
 
   if ($choices[0] -is [string]) {
-    $choices = $choices | % { New-Object System.Management.Automation.Host.ChoiceDescription $_ }
+    $choices = $choices | ForEach-Object { New-Object System.Management.Automation.Host.ChoiceDescription $_ }
   }
 
   $answerIndex = $host.ui.PromptForChoice($caption, $message, $choices, $defaultChoiceIndex)
@@ -48,7 +48,7 @@ function Read-BooleanChoice {
   $trueChoice = New-Object System.Management.Automation.Host.ChoiceDescription $trueLabel, $trueHelp
   $falseChoice = New-Object System.Management.Automation.Host.ChoiceDescription $falseLabel, $falseHelp
   $defaultChoiceIndex = -1
-  if ($defaultChoice -ne $null) {
+  if ($null -ne $defaultChoice) {
     $defaultChoiceIndex = 0
     if ($defaultChoice -eq $false -xor $showFalseAsFirstOption) {
       $defaultChoiceIndex = 1
@@ -61,7 +61,7 @@ function Read-BooleanChoice {
   else {
     $choices = @($trueChoice, $falseChoice)
   }
-  $answerLabel = Read-Choice $caption $message $choices $defaultChoiceIndex
+  $answerLabel = Read-Choice -caption:$caption -message:$message -choices:$choices -defaultChoiceIndex:$defaultChoiceIndex
   return $answerLabel -eq $trueLabel
   <#
 .SYNOPSIS

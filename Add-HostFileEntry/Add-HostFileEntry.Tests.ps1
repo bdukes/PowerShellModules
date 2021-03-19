@@ -8,7 +8,7 @@ Describe 'Add-HostFileEntry' {
 
         Mock -ModuleName Add-HostFileEntry Assert-AdministratorRole {}
         mkdir TestDrive:\System32\drivers\etc
-        cp $PsScriptRoot\fixtures\no-blank-at-end.hosts TestDrive:\System32\drivers\etc\hosts
+        Copy-Item $PsScriptRoot\fixtures\no-blank-at-end.hosts TestDrive:\System32\drivers\etc\hosts
 
         Add-HostFileEntry test.test
 
@@ -21,7 +21,7 @@ Describe 'Add-HostFileEntry' {
 
         Mock -ModuleName Add-HostFileEntry Assert-AdministratorRole {}
         mkdir TestDrive:\System32\drivers\etc
-        cp $PsScriptRoot\fixtures\empty.hosts TestDrive:\System32\drivers\etc\hosts
+        Copy-Item $PsScriptRoot\fixtures\empty.hosts TestDrive:\System32\drivers\etc\hosts
 
         Add-HostFileEntry test.test
 
@@ -38,7 +38,7 @@ Describe 'Remove-HostFileEntry' {
 
         Mock -ModuleName Add-HostFileEntry Assert-AdministratorRole {}
         mkdir TestDrive:\System32\drivers\etc
-        cp $PsScriptRoot\fixtures\no-blank-at-end.hosts TestDrive:\System32\drivers\etc\hosts
+        Copy-Item $PsScriptRoot\fixtures\no-blank-at-end.hosts TestDrive:\System32\drivers\etc\hosts
 
         Remove-HostFileEntry example.example
 
@@ -51,7 +51,7 @@ Describe 'Remove-HostFileEntry' {
 
         Mock -ModuleName Add-HostFileEntry Assert-AdministratorRole {}
         mkdir TestDrive:\System32\drivers\etc
-        cp $PsScriptRoot\fixtures\empty.hosts TestDrive:\System32\drivers\etc\hosts
+        Copy-Item $PsScriptRoot\fixtures\empty.hosts TestDrive:\System32\drivers\etc\hosts
 
         Remove-HostFileEntry test.test
 
@@ -64,7 +64,7 @@ Describe 'Remove-HostFileEntry' {
 
         Mock -ModuleName Add-HostFileEntry Assert-AdministratorRole {}
         mkdir TestDrive:\System32\drivers\etc
-        cp $PsScriptRoot\fixtures\three-hosts.hosts TestDrive:\System32\drivers\etc\hosts
+        Copy-Item $PsScriptRoot\fixtures\three-hosts.hosts TestDrive:\System32\drivers\etc\hosts
 
         Remove-HostFileEntry two.example
 

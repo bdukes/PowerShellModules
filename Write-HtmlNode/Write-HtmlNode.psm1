@@ -20,7 +20,7 @@ function Write-HtmlNode($node, $indent = '', [switch]$excludeAttributes, [switch
     Write-Host '<' -NoNewline -ForegroundColor Gray
     Write-Host $node.nodeName -NoNewline -ForegroundColor Blue
     if ($excludeAttributes -eq $false) {
-        foreach ($attr in ($node.attributes | ? { $_.Specified })) {
+        foreach ($attr in ($node.attributes | Where-Object { $_.Specified })) {
             Write-Host ' ' -NoNewline
             Write-Host $attr.name -NoNewline -ForegroundColor Magenta
             Write-Host '="' -NoNewline -ForegroundColor Gray
@@ -35,7 +35,7 @@ function Write-HtmlNode($node, $indent = '', [switch]$excludeAttributes, [switch
     Write-Host '>' -ForegroundColor Gray
     $child = $node.firstChild
     $childIndent = $indent + '  '
-    while ($child -ne $null) {
+    while ($null -ne $child) {
         write-htmlNode $child $childIndent -excludeAttributes:$excludeAttributes -excludeEmptyElements:$excludeEmptyElements -excludeComments:$excludeComments
         $child = $child.nextSibling
     }
