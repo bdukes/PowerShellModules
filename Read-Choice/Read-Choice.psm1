@@ -2,9 +2,9 @@ Set-StrictMode -Version Latest
 
 function Read-Choice {
   param(
-    [Parameter(Mandatory=$true)][string]$caption,
-    [Parameter(Mandatory=$true)][string]$message,
-    [Parameter(Mandatory=$true)][array]$choices,
+    [Parameter(Mandatory = $true)][string]$caption,
+    [Parameter(Mandatory = $true)][string]$message,
+    [Parameter(Mandatory = $true)][array]$choices,
     [int]$defaultChoiceIndex = -1
   );
 
@@ -15,7 +15,7 @@ function Read-Choice {
   $answerIndex = $host.ui.PromptForChoice($caption, $message, $choices, $defaultChoiceIndex)
 
   return $choices[$answerIndex].Label
-<#
+  <#
 .SYNOPSIS
     Prompts the user to pick a choice from a set of options
 .DESCRIPTION
@@ -35,8 +35,8 @@ function Read-Choice {
 
 function Read-BooleanChoice {
   param(
-    [Parameter(Mandatory=$true)][string]$caption,
-    [Parameter(Mandatory=$true)][string]$message,
+    [Parameter(Mandatory = $true)][string]$caption,
+    [Parameter(Mandatory = $true)][string]$message,
     [string]$trueLabel = '&Yes',
     [string]$trueHelp = '',
     [string]$falseLabel = '&No',
@@ -45,8 +45,8 @@ function Read-BooleanChoice {
     $defaultChoice = $null
   );
 
-  $trueChoice = New-Object System.Management.Automation.Host.ChoiceDescription $trueLabel,$trueHelp
-  $falseChoice = New-Object System.Management.Automation.Host.ChoiceDescription $falseLabel,$falseHelp
+  $trueChoice = New-Object System.Management.Automation.Host.ChoiceDescription $trueLabel, $trueHelp
+  $falseChoice = New-Object System.Management.Automation.Host.ChoiceDescription $falseLabel, $falseHelp
   $defaultChoiceIndex = -1
   if ($defaultChoice -ne $null) {
     $defaultChoiceIndex = 0
@@ -56,13 +56,14 @@ function Read-BooleanChoice {
   }
 
   if ($showFalseAsFirstOption) {
-    $choices = @($falseChoice,$trueChoice)
-  } else {
-    $choices = @($trueChoice,$falseChoice)
+    $choices = @($falseChoice, $trueChoice)
+  }
+  else {
+    $choices = @($trueChoice, $falseChoice)
   }
   $answerLabel = Read-Choice $caption $message $choices $defaultChoiceIndex
   return $answerLabel -eq $trueLabel
-<#
+  <#
 .SYNOPSIS
     Prompts the user between two choices
 .DESCRIPTION

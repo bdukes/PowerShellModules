@@ -4,7 +4,7 @@ function Test-AdministratorRole {
   $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
   return $isAdmin
 
-<#
+  <#
 .SYNOPSIS
     Gets a value indicating whether the current user is an administrator.
 .DESCRIPTION
@@ -16,7 +16,7 @@ function Test-AdministratorRole {
 
 function Assert-AdministratorRole {
   param(
-    [parameter(position=0)]
+    [parameter(position = 0)]
     [string]$errorMessage = "You do not have Administrator rights to run this script!`nPlease re-run this script as an Administrator!"
   );
 
@@ -25,7 +25,7 @@ function Assert-AdministratorRole {
     throw $errorMessage
   }
 
-<#
+  <#
 .SYNOPSIS
     Asserts that the current user is an administrator.  Throws an error if not.
 .DESCRIPTION

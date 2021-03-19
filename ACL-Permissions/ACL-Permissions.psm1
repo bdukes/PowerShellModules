@@ -3,19 +3,17 @@ Set-StrictMode -Version Latest
 
 function Repair-AclCorruption {
     param(
-        [parameter(Mandatory=$true,position=0)]$directory);
+        [parameter(Mandatory = $true, position = 0)]$directory);
 
     $out = icacls "$directory" /verify /t /q
 
-    foreach($line in $out)
-    {
-        if ($line -match '(.:[^:]*): (.*)')
-        {
+    foreach ($line in $out) {
+        if ($line -match '(.:[^:]*): (.*)') {
             $path = $Matches[1]
             Set-Acl $path (Get-Acl $path)
         }
     }
-<#
+    <#
 .SYNOPSIS
     Fixes ACLs on the directory (and its ancestors) that have become corrupted (resulting in "
 .DESCRIPTION
@@ -32,8 +30,8 @@ function Repair-AclCorruption {
 
 function Set-ModifyPermission {
     param(
-        [parameter(Mandatory=$true,position=0)]$directory,
-        [parameter(Mandatory=$true,position=1)]$username,
+        [parameter(Mandatory = $true, position = 0)]$directory,
+        [parameter(Mandatory = $true, position = 1)]$username,
         $domain = 'IIS APPPOOL');
 
     Assert-AdministratorRole
@@ -46,7 +44,8 @@ function Set-ModifyPermission {
         $sid = (Get-ItemProperty IIS:\AppPools\$username).ApplicationPoolSid
         $identifier = New-Object System.Security.Principal.SecurityIdentifier($sid)
         $user = $identifier.Translate([System.Security.Principal.NTAccount])
-    } else {
+    }
+    else {
         $user = New-Object System.Security.Principal.NTAccount($domain, $username)
     }
 
@@ -56,7 +55,7 @@ function Set-ModifyPermission {
     $acl = Get-Acl $directory
     $acl.AddAccessRule($accessrule)
     set-acl -aclobject $acl $directory
-<#
+    <#
 .SYNOPSIS
     Gives the given user the modify permission to the given directory
 .PARAMETER directory

@@ -33,38 +33,36 @@ Add-Type -TypeDefinition @"
 "@
 
 function Install-DNNResources {
-    param(
-        [parameter(Mandatory=$false,position=0)]
-        [string]$siteName
-    );
+  param(
+    [parameter(Mandatory = $false, position = 0)]
+    [string]$siteName
+  );
 
-    if ($siteName -eq '' -and $PWD.Provider.Name -eq 'FileSystem' -and $PWD.Path.StartsWith("$www\")) {
-        $siteName = $PWD.Path.Split('\')[3]
-        Write-Verbose "Site name is '$siteName'"
+  if ($siteName -eq '' -and $PWD.Provider.Name -eq 'FileSystem' -and $PWD.Path.StartsWith("$www\")) {
+    $siteName = $PWD.Path.Split('\')[3]
+    Write-Verbose "Site name is '$siteName'"
+  }
+
+  if ($siteName -eq '') {
+    throw 'You must specify the site name (e.g. dnn.local) if you are not in the website'
+  }
+
+  try {
+    $result = Invoke-WebRequest "https://$siteName/Install/Install.aspx?mode=InstallResources"
+
+    if ($result.StatusCode -ne 200) {
+
+      Write-Warning "There was an error trying to install the resources: Status code $($result.StatusCode)"
+      return
     }
 
-    if ($siteName -eq '') {
-        throw 'You must specify the site name (e.g. dnn.local) if you are not in the website'
-    }
+    Write-HtmlNode $result.ParsedHtml.documentElement -excludeAttributes -excludeEmptyElements -excludeComments
+  }
+  catch {
+    Write-Warning "There was an error trying to install the resources: $_"
+  }
 
-    try
-    {
-        $result = Invoke-WebRequest "https://$siteName/Install/Install.aspx?mode=InstallResources"
-
-        if ($result.StatusCode -ne 200) {
-
-            Write-Warning "There was an error trying to install the resources: Status code $($result.StatusCode)"
-            return
-        }
-
-        Write-HtmlNode $result.ParsedHtml.documentElement -excludeAttributes -excludeEmptyElements -excludeComments
-    }
-    catch
-    {
-        Write-Warning "There was an error trying to install the resources: $_"
-    }
-
-<#
+  <#
 .SYNOPSIS
     Kicks off any pending extension package installations
 .DESCRIPTION
@@ -76,7 +74,7 @@ function Install-DNNResources {
 
 function Remove-DNNSite {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName
   );
 
@@ -88,29 +86,32 @@ function Remove-DNNSite {
   if (Test-Path IIS:\Sites\$siteName) {
     $website = Get-Website $siteName
     foreach ($binding in $website.Bindings.Collection) {
-        if ($binding.sslFlags -eq 1) {
-            $hostHeader = $binding.bindingInformation.Substring(6) #remove "*:443:" from the beginning of the binding info
-            Remove-SslWebBinding $siteName $hostHeader
-        }
+      if ($binding.sslFlags -eq 1) {
+        $hostHeader = $binding.bindingInformation.Substring(6) #remove "*:443:" from the beginning of the binding info
+        Remove-SslWebBinding $siteName $hostHeader
+      }
     }
 
     Write-Host "Removing $siteName website from IIS"
     Remove-Website $siteName
-  } else {
+  }
+  else {
     Write-Host "$siteName website not found in IIS"
   }
 
   if (Test-Path IIS:\AppPools\$siteName) {
     Write-Host "Removing $siteName app pool from IIS"
     Remove-WebAppPool $siteName
-  } else {
+  }
+  else {
     Write-Host "$siteName app pool not found in IIS"
   }
 
   if (Test-Path $www\$siteName) {
     Write-Host "Deleting $www\$siteName"
     Remove-Item $www\$siteName -Recurse -Force
-  } else {
+  }
+  else {
     Write-Host "$www\$siteName does not exist"
   }
 
@@ -119,21 +120,23 @@ function Remove-DNNSite {
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
     Write-Host "Dropping $siteName database"
     Invoke-Sqlcmd -Query:"DROP DATABASE [$siteName];" -ServerInstance:. -Database:master
-  } else {
+  }
+  else {
     Write-Host "$siteName database not found"
   }
 
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$siteName")") {
     Write-Host "Dropping IIS AppPool\$siteName database login"
     Invoke-Sqlcmd -Query:"DROP LOGIN [IIS AppPool\$siteName];" -Database:master
-  } else {
+  }
+  else {
     Write-Host "IIS AppPool\$siteName database login not found"
   }
 
   #TODO: remove all host entries added during restore
   Remove-HostFileEntry $siteName
 
-<#
+  <#
 .SYNOPSIS
     Destroys a DNN site
 .DESCRIPTION
@@ -145,9 +148,9 @@ function Remove-DNNSite {
 
 function Rename-DNNSite {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$oldSiteName,
-    [parameter(Mandatory=$true,position=1)]
+    [parameter(Mandatory = $true, position = 1)]
     [string]$newSiteName
   );
 
@@ -156,14 +159,15 @@ function Rename-DNNSite {
   if ((Test-Path IIS:\AppPools\$oldSiteName) -and (Get-WebAppPoolState $oldSiteName).Value -eq 'Started') {
     $appPool = Stop-WebAppPool $oldSiteName -Passthru
     while ($appPool.State -ne 'Stopped') {
-        Start-Sleep -m 100
+      Start-Sleep -m 100
     }
   }
 
   if (Test-Path $www\$oldSiteName) {
     Write-Host "Renaming $www\$oldSiteName to $newSiteName"
     Rename-Item $www\$oldSiteName $newSiteName
-  } else {
+  }
+  else {
     Write-Host "$www\$oldSiteName does not exist"
   }
 
@@ -174,14 +178,16 @@ function Rename-DNNSite {
   if (Test-Path IIS:\Sites\$oldSiteName) {
     Write-Host "Renaming $oldSiteName website in IIS to $newSiteName"
     Rename-Item IIS:\Sites\$oldSiteName $newSiteName
-  } else {
+  }
+  else {
     Write-Host "$oldSiteName website not found in IIS"
   }
 
   if (Test-Path IIS:\AppPools\$oldSiteName) {
     Write-Host "Renaming $oldSiteName app pool in IIS to $newSiteName"
     Rename-Item IIS:\AppPools\$oldSiteName $newSiteName
-  } else {
+  }
+  else {
     Write-Host "$oldSiteName app pool not found in IIS"
   }
 
@@ -193,7 +199,8 @@ function Rename-DNNSite {
     Write-Host "Renaming $oldSiteName database to $newSiteName"
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$oldSiteName] MODIFY NAME = [$newSiteName];" -ServerInstance:. -Database:master
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$newSiteName] SET MULTI_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
-  } else {
+  }
+  else {
     Write-Host "$oldSiteName database not found"
   }
 
@@ -217,7 +224,8 @@ function Rename-DNNSite {
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$oldSiteName")") {
     Write-Host "Dropping IIS AppPool\$oldSiteName database login"
     Invoke-Sqlcmd -Query:"DROP LOGIN [IIS AppPool\$oldSiteName];" -Database:master
-  } else {
+  }
+  else {
     Write-Host "IIS AppPool\$oldSiteName database login not found"
   }
 
@@ -241,7 +249,7 @@ function Rename-DNNSite {
   Write-Host "Launching https://$newSiteName"
   Start-Process -FilePath:https://$newSiteName
 
-<#
+  <#
 .SYNOPSIS
     Renames a DNN site
 .DESCRIPTION
@@ -255,19 +263,19 @@ function Rename-DNNSite {
 
 function Restore-DNNSite {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
-    [parameter(Mandatory=$true,position=1)]
+    [parameter(Mandatory = $true, position = 1)]
     [string]$siteZip,
-    [parameter(Mandatory=$true,position=2)]
+    [parameter(Mandatory = $true, position = 2)]
     [string]$databaseBackup,
-    [parameter(Mandatory=$false)]
+    [parameter(Mandatory = $false)]
     [string]$sourceVersion = '',
-    [parameter(Mandatory=$false)]
+    [parameter(Mandatory = $false)]
     [DnnProduct]$sourceProduct = [DnnProduct]::DnnPlatform,
-    [parameter(Mandatory=$false)]
+    [parameter(Mandatory = $false)]
     [string]$oldDomain = '',
-    [parameter(Mandatory=$false)]
+    [parameter(Mandatory = $false)]
     [switch]$includeSource = $defaultIncludeSource
   );
 
@@ -280,7 +288,7 @@ function Restore-DNNSite {
   $includeSource = $includeSource -or $sourceVersion -ne ''
   New-DNNSite $siteName -siteZip:$siteZip -databaseBackup:$databaseBackup -version:$sourceVersion -includeSource:$includeSource -oldDomain:$oldDomain
 
-<#
+  <#
 .SYNOPSIS
     Restores a backup of a DNN site
 .DESCRIPTION
@@ -302,11 +310,11 @@ function Restore-DNNSite {
 
 function Upgrade-DNNSite {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
-    [parameter(Mandatory=$false,position=1)]
+    [parameter(Mandatory = $false, position = 1)]
     [string]$version = $defaultDNNVersion,
-    [parameter(Mandatory=$false,position=2)]
+    [parameter(Mandatory = $false, position = 2)]
     [DnnProduct]$product = [DnnProduct]::DnnPlatform,
     [switch]$includeSource = $defaultIncludeSource
   );
@@ -316,7 +324,7 @@ function Upgrade-DNNSite {
   Write-Host "Launching https://$siteName/Install/Install.aspx?mode=upgrade"
   Start-Process -FilePath:https://$siteName/Install/Install.aspx?mode=upgrade
 
-<#
+  <#
 .SYNOPSIS
     Upgrades a DNN site
 .DESCRIPTION
@@ -334,11 +342,11 @@ function Upgrade-DNNSite {
 
 function New-DNNSite {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
-    [parameter(Mandatory=$false,position=1)]
+    [parameter(Mandatory = $false, position = 1)]
     [string]$version = $defaultDNNVersion,
-    [parameter(Mandatory=$false,position=2)]
+    [parameter(Mandatory = $false, position = 2)]
     [DnnProduct]$product = [DnnProduct]::DnnPlatform,
     [switch]$includeSource = $defaultIncludeSource,
     [string]$objectQualifier = '',
@@ -383,72 +391,76 @@ function New-DNNSite {
     $databaseOwner = $webConfig.configuration.dotnetnuke.data.providers.add.databaseOwner.TrimEnd('.')
 
     if ($oldDomain -ne '') {
-        Write-Host "Updating portal aliases"
-        Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'PortalAlias' $databaseOwner $objectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$oldDomain', '$siteName')" -Database:$siteName
-        Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'PortalSettings' $databaseOwner $objectQualifier) SET SettingValue = REPLACE(SettingValue, '$oldDomain', '$siteName') WHERE SettingName = 'DefaultPortalAlias'" -Database:$siteName
+      Write-Host "Updating portal aliases"
+      Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'PortalAlias' $databaseOwner $objectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$oldDomain', '$siteName')" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'PortalSettings' $databaseOwner $objectQualifier) SET SettingValue = REPLACE(SettingValue, '$oldDomain', '$siteName') WHERE SettingName = 'DefaultPortalAlias'" -Database:$siteName
 
-        $aliases = Invoke-Sqlcmd -Query:"SELECT HTTPAlias FROM $(Get-DNNDatabaseObjectName 'PortalAlias' $databaseOwner $objectQualifier) WHERE HTTPAlias != '$siteName'" -Database:$siteName
-        foreach ($aliasRow in $aliases) {
-            $alias = $aliasRow.HTTPAlias
-            Write-Verbose "Updating $alias"
-            if ($alias -Like '*/*') {
-                $split = $alias.Split('/')
-                $aliasHost = $split[0]
-                $childAlias = $split[1..($split.length - 1)] -join '/'
-            } else {
-                $aliasHost = $alias
-                $childAlias = $null
-            }
-
-            if ($aliasHost -Like '*:*') {
-                $split = $aliasHost.Split(':')
-                $aliasHost = $split[0]
-                $port = $split[1]
-            } else {
-                $port = 80
-            }
-
-            if ($aliasHost -NotLike "*$siteName*") {
-                $aliasHost = $aliasHost + $siteNameExtension
-                $newAlias = $aliasHost
-                if ($port -ne 80) {
-                    $newAlias = $newAlias + ':' + $port
-                }
-
-                if ($childAlias) {
-                    $newAlias = $newAlias + '/' + $childAlias
-                }
-                Write-Verbose "Changing $alias to $newAlias"
-                Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'PortalAlias' $databaseOwner $objectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$siteName
-            }
-
-            $existingBinding = Get-WebBinding -Name:$siteName -HostHeader:$aliasHost -Port:$port
-            if ($existingBinding -eq $null) {
-                Write-Verbose "Setting up IIS binding and HOSTS entry for $aliasHost"
-                New-WebBinding -Name:$siteName -IP:'*' -Port:$port -Protocol:http -HostHeader:$aliasHost
-                Add-HostFileEntry $aliasHost
-            } else {
-                Write-Verbose "IIS binding already exists for $aliasHost"
-            }
-
-            $domains.Add($aliasHost)
+      $aliases = Invoke-Sqlcmd -Query:"SELECT HTTPAlias FROM $(Get-DNNDatabaseObjectName 'PortalAlias' $databaseOwner $objectQualifier) WHERE HTTPAlias != '$siteName'" -Database:$siteName
+      foreach ($aliasRow in $aliases) {
+        $alias = $aliasRow.HTTPAlias
+        Write-Verbose "Updating $alias"
+        if ($alias -Like '*/*') {
+          $split = $alias.Split('/')
+          $aliasHost = $split[0]
+          $childAlias = $split[1..($split.length - 1)] -join '/'
         }
+        else {
+          $aliasHost = $alias
+          $childAlias = $null
+        }
+
+        if ($aliasHost -Like '*:*') {
+          $split = $aliasHost.Split(':')
+          $aliasHost = $split[0]
+          $port = $split[1]
+        }
+        else {
+          $port = 80
+        }
+
+        if ($aliasHost -NotLike "*$siteName*") {
+          $aliasHost = $aliasHost + $siteNameExtension
+          $newAlias = $aliasHost
+          if ($port -ne 80) {
+            $newAlias = $newAlias + ':' + $port
+          }
+
+          if ($childAlias) {
+            $newAlias = $newAlias + '/' + $childAlias
+          }
+          Write-Verbose "Changing $alias to $newAlias"
+          Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'PortalAlias' $databaseOwner $objectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$siteName
+        }
+
+        $existingBinding = Get-WebBinding -Name:$siteName -HostHeader:$aliasHost -Port:$port
+        if ($existingBinding -eq $null) {
+          Write-Verbose "Setting up IIS binding and HOSTS entry for $aliasHost"
+          New-WebBinding -Name:$siteName -IP:'*' -Port:$port -Protocol:http -HostHeader:$aliasHost
+          Add-HostFileEntry $aliasHost
+        }
+        else {
+          Write-Verbose "IIS binding already exists for $aliasHost"
+        }
+
+        $domains.Add($aliasHost)
+      }
     }
 
     if ($objectQualifier -ne '') {
-        $oq = $objectQualifier + '_'
-    } else {
-        $oq = ''
+      $oq = $objectQualifier + '_'
+    }
+    else {
+      $oq = ''
     }
     $catalookSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(Encode-SQLName $siteName)\Tables\$databaseOwner.${oq}CAT_Settings"
     if (Test-Path $catalookSettingsTablePath) {
-        Write-Host "Setting Catalook to test mode"
-        Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'CAT_Settings' $databaseOwner $objectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$siteName
+      Write-Host "Setting Catalook to test mode"
+      Invoke-Sqlcmd -Query:"UPDATE $(Get-DNNDatabaseObjectName 'CAT_Settings' $databaseOwner $objectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$siteName
     }
 
     if (Test-Path $www\$siteName\Website\DesktopModules\EngageSports) {
-        Write-Host 'Updating Engage: Sports wizard URLs'
-        Update-WizardUrls $siteName
+      Write-Host 'Updating Engage: Sports wizard URLs'
+      Update-WizardUrls $siteName
     }
 
     Write-Host "Setting SMTP to localhost"
@@ -505,7 +517,7 @@ function New-DNNSite {
   Write-Host "Launching https://$siteName"
   Start-Process -FilePath:https://$siteName
 
-<#
+  <#
 .SYNOPSIS
     Creates a DNN site
 .DESCRIPTION
@@ -532,112 +544,120 @@ function New-DNNSite {
 }
 
 function getPackageName([System.Version]$version, [DnnProduct]$product) {
-    $72version = New-Object System.Version("7.2")
-    $74version = New-Object System.Version("7.4")
-    if ($version -lt $72version) {
-        $productPackageNames = @{
-            [DnnProduct]::DnnPlatform = "DotNetNuke_Community"
-            [DnnProduct]::EvoqContent = "DotNetNuke_Professional"
-            [DnnProduct]::EvoqContentEnterprise = "DotNetNuke_Enterprise"
-            [DnnProduct]::EvoqEngage = "Evoq_Social"
-        }
-    } elseif ($version -lt $74version) {
-        $productPackageNames = @{
-            [DnnProduct]::DnnPlatform = "DNN_Platform"
-            [DnnProduct]::EvoqContent = "Evoq_Content"
-            [DnnProduct]::EvoqContentEnterprise = "Evoq_Enterprise"
-            [DnnProduct]::EvoqEngage = "Evoq_Social"
-        }
-    } else {
-        $productPackageNames = @{
-            [DnnProduct]::DnnPlatform = "DNN_Platform"
-            [DnnProduct]::EvoqContent = "Evoq_Content_Basic"
-            [DnnProduct]::EvoqContentEnterprise = "Evoq_Content"
-            [DnnProduct]::EvoqEngage = "Evoq_Engage"
-        }
+  $72version = New-Object System.Version("7.2")
+  $74version = New-Object System.Version("7.4")
+  if ($version -lt $72version) {
+    $productPackageNames = @{
+      [DnnProduct]::DnnPlatform           = "DotNetNuke_Community"
+      [DnnProduct]::EvoqContent           = "DotNetNuke_Professional"
+      [DnnProduct]::EvoqContentEnterprise = "DotNetNuke_Enterprise"
+      [DnnProduct]::EvoqEngage            = "Evoq_Social"
     }
-    return $productPackageNames.Get_Item($product)
+  }
+  elseif ($version -lt $74version) {
+    $productPackageNames = @{
+      [DnnProduct]::DnnPlatform           = "DNN_Platform"
+      [DnnProduct]::EvoqContent           = "Evoq_Content"
+      [DnnProduct]::EvoqContentEnterprise = "Evoq_Enterprise"
+      [DnnProduct]::EvoqEngage            = "Evoq_Social"
+    }
+  }
+  else {
+    $productPackageNames = @{
+      [DnnProduct]::DnnPlatform           = "DNN_Platform"
+      [DnnProduct]::EvoqContent           = "Evoq_Content_Basic"
+      [DnnProduct]::EvoqContentEnterprise = "Evoq_Content"
+      [DnnProduct]::EvoqEngage            = "Evoq_Engage"
+    }
+  }
+  return $productPackageNames.Get_Item($product)
 }
 
 function findPackagePath([System.Version]$version, [DnnProduct]$product, [string]$type) {
-    $majorVersion = $version.Major
-    switch ($product) {
-        DnnPlatform { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion"; break; }
-        EvoqContent { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content Basic"; break; }
-        EvoqContentEnterprise { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content"; break; }
-        EvoqEngage { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Engage"; break; }
-    }
+  $majorVersion = $version.Major
+  switch ($product) {
+    DnnPlatform { $packagesFolder = "${env:soft}\DNN\Versions\DotNetNuke $majorVersion"; break; }
+    EvoqContent { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content Basic"; break; }
+    EvoqContentEnterprise { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Content"; break; }
+    EvoqEngage { $packagesFolder = "${env:soft}\DNN\Versions\Evoq Engage"; break; }
+  }
 
-    $packageName = getPackageName $version $product
+  $packageName = getPackageName $version $product
 
-    $formattedVersion = $version.Major.ToString('0') + '.' + $version.Minor.ToString('0') + '.' + $version.Build.ToString('0')
+  $formattedVersion = $version.Major.ToString('0') + '.' + $version.Minor.ToString('0') + '.' + $version.Build.ToString('0')
+  $package = Get-Item "$packagesFolder\${packageName}_${formattedVersion}*_${type}.zip"
+  if ($package -eq $null) {
+    $formattedVersion = $version.Major.ToString('0#') + '.' + $version.Minor.ToString('0#') + '.' + $version.Build.ToString('0#')
     $package = Get-Item "$packagesFolder\${packageName}_${formattedVersion}*_${type}.zip"
-    if ($package -eq $null) {
-        $formattedVersion = $version.Major.ToString('0#') + '.' + $version.Minor.ToString('0#') + '.' + $version.Build.ToString('0#')
-        $package = Get-Item "$packagesFolder\${packageName}_${formattedVersion}*_${type}.zip"
-    }
+  }
 
-    if (($package -eq $null) -and ($product -ne [DnnProduct]::DnnPlatform)) {
-        return findPackagePath $version DnnPlatform $type
-    } elseif ($package -eq $null) {
-        return $null
-    } else {
-        return $package.FullName
-    }
+  if (($package -eq $null) -and ($product -ne [DnnProduct]::DnnPlatform)) {
+    return findPackagePath $version DnnPlatform $type
+  }
+  elseif ($package -eq $null) {
+    return $null
+  }
+  else {
+    return $package.FullName
+  }
 }
 
 function Extract-Zip {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$output,
-    [parameter(Mandatory=$true,position=1)]
+    [parameter(Mandatory = $true, position = 1)]
     [string]$zipFile
   );
 
   Write-Verbose "extracting from $zipFile to $output"
   if (Get-Command '7zG' -ErrorAction SilentlyContinue) {
     $commandName = '7zG'
-  } elseif (Get-Command '7za' -ErrorAction SilentlyContinue) {
+  }
+  elseif (Get-Command '7za' -ErrorAction SilentlyContinue) {
     $commandName = '7za'
-  } else {
+  }
+  else {
     $commandName = $false
   }
   if ($commandName) {
-      try {
-        $outputFile = [System.IO.Path]::GetTempFileName()
-        $process =  Start-Process $commandName -ArgumentList "x -y -o`"$output`" -- `"$zipFile`"" -Wait -NoNewWindow -PassThru -RedirectStandardOutput $outputFile
-        if ($process.ExitCode -ne 0) {
-          if ($process.ExitCode -eq 1) {
-            Write-Warning "Non-fatal error extracting $zipFile, opening 7-Zip output"
-          } else {
-            Write-Warning "Error extracting $zipFile, opening 7-Zip output"
-          }
+    try {
+      $outputFile = [System.IO.Path]::GetTempFileName()
+      $process = Start-Process $commandName -ArgumentList "x -y -o`"$output`" -- `"$zipFile`"" -Wait -NoNewWindow -PassThru -RedirectStandardOutput $outputFile
+      if ($process.ExitCode -ne 0) {
+        if ($process.ExitCode -eq 1) {
+          Write-Warning "Non-fatal error extracting $zipFile, opening 7-Zip output"
+        }
+        else {
+          Write-Warning "Error extracting $zipFile, opening 7-Zip output"
+        }
 
-          $zipLogOutput = Get-Content $outputFile;
-          if ($zipLogOutput) {
-            Write-Warning $zipLogOutput
-          }
+        $zipLogOutput = Get-Content $outputFile;
+        if ($zipLogOutput) {
+          Write-Warning $zipLogOutput
         }
       }
-      finally {
-        Remove-Item $outputFile
-      }
-  } else {
-      Write-Verbose 'Couldn''t find 7-Zip (try running ''choco install 7zip.commandline''), expanding with PSCX''s (slower) Expand-Archive cmdlet'
-      if (-not (Test-Path $output)) {
-        mkdir $output | Out-Null
-      }
-      Expand-Archive $zipFile -Output $output -ShowProgress
+    }
+    finally {
+      Remove-Item $outputFile
+    }
+  }
+  else {
+    Write-Verbose 'Couldn''t find 7-Zip (try running ''choco install 7zip.commandline''), expanding with PSCX''s (slower) Expand-Archive cmdlet'
+    if (-not (Test-Path $output)) {
+      mkdir $output | Out-Null
+    }
+    Expand-Archive $zipFile -Output $output -ShowProgress
   }
 }
 
 function Extract-Packages {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
-    [parameter(Mandatory=$false,position=1)]
+    [parameter(Mandatory = $false, position = 1)]
     [string]$version,
-    [parameter(Mandatory=$true,position=2)]
+    [parameter(Mandatory = $true, position = 2)]
     [DnnProduct]$product = [DnnProduct]::DnnPlatform,
     [switch]$includeSource = $defaultIncludeSource,
     [string]$siteZip = '',
@@ -646,19 +666,19 @@ function Extract-Packages {
 
   $siteZipOutput = $null;
   if ($siteZip -ne '') {
-      if (Test-Path $siteZip -PathType Leaf) {
-          $siteZipOutput = "$www\$siteName\Extracted_Website"
-          Extract-Zip "$siteZipOutput" "$siteZip"
-          $siteZip = $siteZipOutput
-          $unzippedFiles = @(Get-ChildItem $siteZipOutput -Directory)
-          if ($unzippedFiles.Length -eq 1) {
-              $siteZip += "\$unzippedFiles"
-          }
+    if (Test-Path $siteZip -PathType Leaf) {
+      $siteZipOutput = "$www\$siteName\Extracted_Website"
+      Extract-Zip "$siteZipOutput" "$siteZip"
+      $siteZip = $siteZipOutput
+      $unzippedFiles = @(Get-ChildItem $siteZipOutput -Directory)
+      if ($unzippedFiles.Length -eq 1) {
+        $siteZip += "\$unzippedFiles"
       }
+    }
 
-      $assemblyPath = "$siteZip\bin\DotNetNuke.dll"
-      $version = [Reflection.AssemblyName]::GetAssemblyName($assemblyPath).Version
-      Write-Verbose "Found version $version of DotNetNuke.dll"
+    $assemblyPath = "$siteZip\bin\DotNetNuke.dll"
+    $version = [Reflection.AssemblyName]::GetAssemblyName($assemblyPath).Version
+    Write-Verbose "Found version $version of DotNetNuke.dll"
   }
   elseif ($env:soft -eq $null) {
     throw 'You must set the environment variable `soft` to the path that contains your DNN install packages'
@@ -676,46 +696,48 @@ function Extract-Packages {
     $sourcePath = findPackagePath $version $product 'Source'
     Write-Verbose "Source Path is $sourcePath"
     if ($sourcePath -eq $null -or $sourcePath -eq '' -or -not (Test-Path $sourcePath)) {
-        Write-Error "Fallback source package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Extract DNN $version source" -CategoryTargetName:$sourcePath -TargetObject:$sourcePath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
+      Write-Error "Fallback source package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Extract DNN $version source" -CategoryTargetName:$sourcePath -TargetObject:$sourcePath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
     }
     Write-Verbose "extracting from $sourcePath to $www\$siteName"
     Extract-Zip "$www\$siteName" "$sourcePath"
     if (Test-Path "$www\$siteName\Platform\Website\" -PathType Container) {
-        Copy-Item "$www\$siteName\Platform\*" "$www\$siteName\" -Force -Recurse
-        Remove-Item "$www\$siteName\Platform\" -Force -Recurse
+      Copy-Item "$www\$siteName\Platform\*" "$www\$siteName\" -Force -Recurse
+      Remove-Item "$www\$siteName\Platform\" -Force -Recurse
     }
 
     Write-Host "Copying DNN $version source symbols into install directory"
     $symbolsPath = findPackagePath $version $product 'Symbols'
     Write-Verbose "Symbols Path is $sourcePath"
     if ($symbolsPath -eq $null -or $symbolsPath -eq '' -or -not (Test-Path $symbolsPath)) {
-        Write-Error "Fallback symbols package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Copy DNN $version source symbols" -CategoryTargetName:$symbolsPath -TargetObject:$symbolsPath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
+      Write-Error "Fallback symbols package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Copy DNN $version source symbols" -CategoryTargetName:$symbolsPath -TargetObject:$symbolsPath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
     }
     Write-Verbose "cp $symbolsPath $www\$siteName\Website\Install\Module"
     Copy-Item $symbolsPath $www\$siteName\Website\Install\Module
 
     Write-Host "Updating site URL in sln files"
     Get-ChildItem $www\$siteName\*.sln | ForEach-Object {
-        $slnContent = (Get-Content $_);
-        $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Community"', "`"https://$siteName`"";
-        $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Professional"', "`"https://$siteName`"";
-        $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Enterprise"', "`"https://$siteName`"";
-        $slnContent = $slnContent -replace '"http://localhost/DNN_Platform"', "`"https://$siteName`""; # DNN 7.1.2+
-        Set-Content $_ $slnContent;
+      $slnContent = (Get-Content $_);
+      $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Community"', "`"https://$siteName`"";
+      $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Professional"', "`"https://$siteName`"";
+      $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Enterprise"', "`"https://$siteName`"";
+      $slnContent = $slnContent -replace '"http://localhost/DNN_Platform"', "`"https://$siteName`""; # DNN 7.1.2+
+      Set-Content $_ $slnContent;
     }
   }
 
   if ($siteZip -eq '') {
     if ($useUpgradePackage) {
-        $siteZip = findPackagePath $version $product 'Upgrade'
-    } else {
-        $siteZip = findPackagePath $version $product 'Install'
+      $siteZip = findPackagePath $version $product 'Upgrade'
+    }
+    else {
+      $siteZip = findPackagePath $version $product 'Install'
     }
 
     if ($siteZip -eq $null -or $siteZip -eq '' -or -not (Test-Path $siteZip)) {
-        throw "The package for $product $version could not be found, aborting installation"
+      throw "The package for $product $version could not be found, aborting installation"
     }
-  } elseif ($siteZip -eq $null -or $siteZip -eq '' -or -not (Test-Path $siteZip)) {
+  }
+  elseif ($siteZip -eq $null -or $siteZip -eq '' -or -not (Test-Path $siteZip)) {
     throw "The supplied file $siteZip could not be found, aborting installation"
   }
 
@@ -746,7 +768,7 @@ function Extract-Packages {
 
 function New-DNNDatabase {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName
   );
 
@@ -756,9 +778,9 @@ function New-DNNDatabase {
 
 function Restore-DNNDatabase {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
-    [parameter(Mandatory=$true,position=1)]
+    [parameter(Mandatory = $true, position = 1)]
     [string]$databaseBackup
   );
 
@@ -770,13 +792,16 @@ function Restore-DNNDatabase {
       if ($backupDir) {
         $sqlAcl = Get-Acl $backupDir
         Set-Acl $databaseBackup $sqlAcl
-      } else {
+      }
+      else {
         Write-Warning 'Unable to find SQL Server backup directory, backup file will not have ACL permissions set'
       }
-    } else {
+    }
+    else {
       Write-Warning 'Unable to find SQL Server info in registry, backup file will not have ACL permissions set'
     }
-  } else {
+  }
+  else {
     Write-Warning 'Unable to find SQL Server info in registry, backup file will not have ACL permissions set'
   }
 
@@ -820,63 +845,65 @@ function Restore-DNNDatabase {
 }
 
 function Get-DNNDatabaseObjectName {
-    param(
-        [parameter(Mandatory=$true,position=0)]
-        [string]$objectName,
-        [parameter(Mandatory=$true,position=1)]
-        [string]$databaseOwner,
-        [parameter(Mandatory=$false,position=2)]
-        [string]$objectQualifier
-    );
+  param(
+    [parameter(Mandatory = $true, position = 0)]
+    [string]$objectName,
+    [parameter(Mandatory = $true, position = 1)]
+    [string]$databaseOwner,
+    [parameter(Mandatory = $false, position = 2)]
+    [string]$objectQualifier
+  );
 
-    if ($objectQualifier -ne '') { $objectQualifier += '_' }
-    return $databaseOwner + ".[$objectQualifier$objectName]"
+  if ($objectQualifier -ne '') { $objectQualifier += '_' }
+  return $databaseOwner + ".[$objectQualifier$objectName]"
 }
 
 function Update-WizardUrls {
-    param(
-        [parameter(Mandatory=$true,position=0)]
-        [string]$siteName
-    );
+  param(
+    [parameter(Mandatory = $true, position = 0)]
+    [string]$siteName
+  );
 
-    $uri = $null
-    foreach ($wizardManifest in (ls $www\$siteName\Website\DesktopModules\EngageSports\*Wizard*.xml)) {
-        [xml]$wizardXml = Get-Content $wizardManifest
-        foreach($urlNode in $wizardXml.GetElementsByTagName("NextUrl")) {
-            if ([System.Uri]::TryCreate([string]$urlNode.InnerText, [System.UriKind]::Absolute, [ref] $uri)) {
-                $urlNode.InnerText = "https://$siteName" + $uri.AbsolutePath
-            }
-        }
-
-        $wizardXml.Save($wizardManifest.FullName)
+  $uri = $null
+  foreach ($wizardManifest in (ls $www\$siteName\Website\DesktopModules\EngageSports\*Wizard*.xml)) {
+    [xml]$wizardXml = Get-Content $wizardManifest
+    foreach ($urlNode in $wizardXml.GetElementsByTagName("NextUrl")) {
+      if ([System.Uri]::TryCreate([string]$urlNode.InnerText, [System.UriKind]::Absolute, [ref] $uri)) {
+        $urlNode.InnerText = "https://$siteName" + $uri.AbsolutePath
+      }
     }
+
+    $wizardXml.Save($wizardManifest.FullName)
+  }
 }
 
 function Watermark-Logos {
-    param(
-        [parameter(Mandatory=$true,position=0)]
-        [string]$siteName,
-        [parameter(Mandatory=$true,position=1)]
-        [string]$siteNameExtension
-    );
+  param(
+    [parameter(Mandatory = $true, position = 0)]
+    [string]$siteName,
+    [parameter(Mandatory = $true, position = 1)]
+    [string]$siteNameExtension
+  );
 
-    if (Get-Command 'gm.exe' -ErrorAction:SilentlyContinue) {
-        $cmd = 'gm.exe'
-        $subCmd = 'mogrify'
-    } elseif (Get-Command 'mogrify' -ErrorAction:SilentlyContinue) {
-        $cmd = 'mogrify'
-        $subCmd = ''
-    } else {
-        Write-Warning "Could not watermark logos, because neither GrapgicsMagick nor ImageMagick's mogrify command could not be found"
-        return
-    }
+  if (Get-Command 'gm.exe' -ErrorAction:SilentlyContinue) {
+    $cmd = 'gm.exe'
+    $subCmd = 'mogrify'
+  }
+  elseif (Get-Command 'mogrify' -ErrorAction:SilentlyContinue) {
+    $cmd = 'mogrify'
+    $subCmd = ''
+  }
+  else {
+    Write-Warning "Could not watermark logos, because neither GrapgicsMagick nor ImageMagick's mogrify command could not be found"
+    return
+  }
 
-    $logos = Invoke-Sqlcmd -Query:"SELECT HomeDirectory + N'/' + LogoFile AS Logo FROM $(Get-DNNDatabaseObjectName 'Vw_Portals' $databaseOwner $objectQualifier) WHERE LogoFile IS NOT NULL" -Database:$siteName
-    $watermarkText = $siteNameExtension.Substring(1)
-    foreach ($logo in $logos) {
-        $logoFile = "$www\$siteName\Website\" + $logo.Logo.Replace('/', '\')
-        & $cmd $subCmd -font Arial -pointsize 60 -draw "gravity Center fill #00ff00 text 0,0 $watermarkText" -draw "gravity NorthEast fill #ff00ff text 0,0 $watermarkText" -draw "gravity SouthWest fill #00ffff text 0,0 $watermarkText" -draw "gravity NorthWest fill #ff0000 text 0,0 $watermarkText" -draw "gravity SouthEast fill #0000ff text 0,0 $watermarkText" $logoFile
-    }
+  $logos = Invoke-Sqlcmd -Query:"SELECT HomeDirectory + N'/' + LogoFile AS Logo FROM $(Get-DNNDatabaseObjectName 'Vw_Portals' $databaseOwner $objectQualifier) WHERE LogoFile IS NOT NULL" -Database:$siteName
+  $watermarkText = $siteNameExtension.Substring(1)
+  foreach ($logo in $logos) {
+    $logoFile = "$www\$siteName\Website\" + $logo.Logo.Replace('/', '\')
+    & $cmd $subCmd -font Arial -pointsize 60 -draw "gravity Center fill #00ff00 text 0,0 $watermarkText" -draw "gravity NorthEast fill #ff00ff text 0,0 $watermarkText" -draw "gravity SouthWest fill #00ffff text 0,0 $watermarkText" -draw "gravity NorthWest fill #ff0000 text 0,0 $watermarkText" -draw "gravity SouthEast fill #0000ff text 0,0 $watermarkText" $logoFile
+  }
 }
 
 Export-ModuleMember Install-DNNResources

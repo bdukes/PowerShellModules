@@ -6,9 +6,9 @@ Import-Module WebAdministration
 
 function New-SslWebBinding {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
-    [parameter(Mandatory=$false,position=1)]
+    [parameter(Mandatory = $false, position = 1)]
     [string[]]$hostHeader
   );
 
@@ -23,13 +23,14 @@ function New-SslWebBinding {
   $existingBindings = @($hostHeader | Foreach-Object { Get-WebBinding -Name:$siteName -HostHeader:$_ -Protocol:https })
   if ($existingBindings.Length -eq $hostHeader.Length) {
     foreach ($existingBinding in $existingBindings) {
-      $domain = $existingBinding.bindingInformation -replace '^.*:.*:',''
+      $domain = $existingBinding.bindingInformation -replace '^.*:.*:', ''
       Write-Warning "Binding for https://$domain to $siteName already exists"
     }
-  } else {
+  }
+  else {
     if ($existingBindings.Length -gt 0) {
       foreach ($existingBinding in $existingBindings) {
-        $domain = $existingBinding.bindingInformation -replace '^.*:.*:',''
+        $domain = $existingBinding.bindingInformation -replace '^.*:.*:', ''
         Write-Warning "Removing binding for https://$domain to $siteName"
         Remove-WebBinding -Name:$siteName -HostHeader:$domain -Protocol:https
       }
@@ -44,10 +45,11 @@ function New-SslWebBinding {
   $existingCertBindings = @($hostHeader | Foreach-Object { Get-Item -Path:"IIS:\SslBindings\!443!$_" -ErrorAction SilentlyContinue })
   if ($existingCertBindings.Length -eq $hostHeader.Length) {
     foreach ($existingBinding in $existingBindings) {
-      $domain = $existingBinding.bindingInformation -replace '^.*:.*:',''
+      $domain = $existingBinding.bindingInformation -replace '^.*:.*:', ''
       Write-Warning "Certificate binding for https://$domain already exists"
     }
-  } else {
+  }
+  else {
     if ($existingCertBindings.Length -gt 0) {
       foreach ($binding in $existingCertBindings) {
         Remove-Item -Path:"IIS:\SslBindings\!443!$($binding.Host)"
@@ -61,13 +63,13 @@ function New-SslWebBinding {
     }
 
     Write-Host "Trusting generated SSL certificate for $hostHeader" #based on https://stackoverflow.com/a/21001534
-    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store 'Root','CurrentUser'
+    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store 'Root', 'CurrentUser'
     $store.Open('ReadWrite')
     $store.Add($cert)
     $store.Close()
   }
 
-<#
+  <#
 .SYNOPSIS
     Adds an HTTPS binding to a website in IIS
 .DESCRIPTION
@@ -81,9 +83,9 @@ function New-SslWebBinding {
 
 function Remove-SslWebBinding {
   param(
-    [parameter(Mandatory=$true,position=0)]
+    [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
-    [parameter(Mandatory=$false,position=1)]
+    [parameter(Mandatory = $false, position = 1)]
     [string[]]$hostHeader
   );
 
@@ -98,7 +100,7 @@ function Remove-SslWebBinding {
     Remove-WebBinding -Name:$siteName -HostHeader:$domain -Protocol:https -ErrorAction:Continue
   }
 
-<#
+  <#
 .SYNOPSIS
     Removes an HTTPS binding to a website in IIS
 .DESCRIPTION

@@ -12,7 +12,8 @@ function Write-HtmlNode($node, $indent = '', [switch]$excludeAttributes, [switch
     if ($node.nodeName -eq '#text') {
         Write-Host $node.nodeValue -ForegroundColor White
         return
-    } elseif ($node.nodeName -eq '#comment') {
+    }
+    elseif ($node.nodeName -eq '#comment') {
         Write-Host $node.OuterHtml -ForegroundColor DarkGreen
         return
     }
@@ -42,7 +43,7 @@ function Write-HtmlNode($node, $indent = '', [switch]$excludeAttributes, [switch
     Write-Host '</' -NoNewline -ForegroundColor Gray
     Write-Host $node.nodeName -NoNewline -ForegroundColor Blue
     Write-Host '>' -ForegroundColor Gray
-<#
+    <#
 .SYNOPSIS
     Writes the given HTML node with color
 .PARAMETER node
