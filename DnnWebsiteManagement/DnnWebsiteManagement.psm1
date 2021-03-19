@@ -472,6 +472,11 @@ function New-DNNSite {
 
     Write-Host "Watermarking site logo(s)"
     Watermark-Logos $siteName $siteNameExtension
+
+    if (Test-Path "$www\$siteName\Website\ApplicationInsights.config") {
+      Write-Host "Remove Application Insights config"
+      Remove-Item "$www\$siteName\Website\ApplicationInsights.config"
+    }
   }
 
   $connectionString = "Data Source=.`;Initial Catalog=$siteName`;Integrated Security=true"
