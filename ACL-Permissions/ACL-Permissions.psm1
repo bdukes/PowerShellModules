@@ -15,7 +15,7 @@ function Repair-AclCorruption {
     }
     <#
 .SYNOPSIS
-    Fixes ACLs on the directory (and its ancestors) that have become corrupted (resulting in "
+    Fixes ACLs on the directory (and its ancestors) that have become corrupted
 .DESCRIPTION
     When the error message "This access control list is not in canonical form and therefore cannot be modified." comes up, you can use this to fix the ACLs
     Based on https://gist.github.com/vbfox/8fbec5c60b0c16289023, found from http://serverfault.com/a/287702/4110

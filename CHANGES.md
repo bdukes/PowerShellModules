@@ -5,6 +5,8 @@
     - Remove Application Insights config when restoring
   - Recycle 1.2.0
     - Add ShouldProcess (i.e. -WhatIf and -Confirm) support
+  - Write-HtmlNode 2.0.0
+    - Indicate it only supports Desktop edition (i.e. Windows Powershell vs. Powershell Core)
 - October 2019
   - BindingRedirects 0.1.0
     - Initial version
