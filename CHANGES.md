@@ -1,5 +1,8 @@
 # Change Log
 
+- March 2021
+  - DnnWebsiteManagement 1.3.0
+    - Remove Application Insights config when restoring
 - October 2019
   - BindingRedirects 0.1.0
     - Initial version
