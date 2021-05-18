@@ -1,5 +1,8 @@
 # Change Log
 
+- May 2021
+  - Recycle 1.3.0
+    - Add support for piping files into Remove-ItemSafely
 - March 2021
   - DnnWebsiteManagement 1.3.0
     - Remove Application Insights config when restoring
