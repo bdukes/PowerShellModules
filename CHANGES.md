@@ -1,5 +1,16 @@
 # Change Log
 
+- September 2021
+  - Declare platform compatibility
+    - ACL-Permissions 1.0.2
+    - Add-HostFileEntry 1.0.4
+    - AdministratorRole 1.0.1
+    - BindingRedirects 0.1.1
+    - DnnWebsiteManagement 1.3.1
+    - Read-Choice 1.0.1
+    - Recycle 1.3.1
+    - SslWebBinding 1.1.2
+    - Write-HtmlNode 2.0.1
 - May 2021
   - Recycle 1.3.0
     - Add support for piping files into Remove-ItemSafely

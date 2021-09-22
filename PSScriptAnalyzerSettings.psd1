@@ -1,4 +1,4 @@
-# Settings for PSScriptAnalyzer invocation.
+﻿# Settings for PSScriptAnalyzer invocation.
 # based on https://devblogs.microsoft.com/powershell/using-psscriptanalyzer-to-check-powershell-version-compatibility/
 @{
     Rules = @{

@@ -1,4 +1,4 @@
-#Requires -Version 3
+﻿#Requires -Version 3
 #Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding
 Set-StrictMode -Version:Latest
 

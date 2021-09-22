@@ -1,4 +1,4 @@
-#Requires -Version 3
+﻿#Requires -Version 3
 #Requires -Modules WebAdministration, AdministratorRole, PKI
 Set-StrictMode -Version:Latest
 

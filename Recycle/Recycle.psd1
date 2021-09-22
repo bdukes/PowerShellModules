@@ -12,7 +12,7 @@
     RootModule        = 'Recycle.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.3.0'
+    ModuleVersion     = '1.3.1'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -95,7 +95,7 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = @('PSEdition_Core', 'PSEdition_Desktop', 'Windows')
+            Tags         = @('PSEdition_Core', 'PSEdition_Desktop', 'Windows')
 
             # A URL to the license for this module.
             LicenseUri   = 'https://github.com/bdukes/PowerShellModules/blob/master/LICENSE'
@@ -120,4 +120,3 @@
     # DefaultCommandPrefix = ''
 
 }
-

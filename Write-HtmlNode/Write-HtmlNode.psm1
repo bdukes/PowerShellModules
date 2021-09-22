@@ -1,4 +1,4 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 
 function Write-HtmlNode($node, $indent = '', [switch]$excludeAttributes, [switch]$excludeEmptyElements, [switch]$excludeComments) {
     if ($excludeEmptyElements -and $node.nodeName -ne '#text' -and $node.nodeName -ne '#comment' -and $node.canHaveChildren -eq $false) {
