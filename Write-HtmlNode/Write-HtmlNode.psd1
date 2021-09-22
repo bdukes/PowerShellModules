@@ -98,7 +98,7 @@
             Tags         = @('PSEdition_Desktop', 'Windows')
 
             # A URL to the license for this module.
-            LicenseUri   = 'https://github.com/bdukes/PowerShellModules/blob/master/LICENSE'
+            LicenseUri   = 'https://github.com/bdukes/PowerShellModules/blob/main/LICENSE'
 
             # A URL to the main website for this project.
             ProjectUri   = 'https://github.com/bdukes/PowerShellModules'
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'https://github.com/bdukes/PowerShellModules/blob/master/CHANGES.md'
+            ReleaseNotes = 'https://github.com/bdukes/PowerShellModules/blob/main/CHANGES.md'
 
         } # End of PSData hashtable
 
