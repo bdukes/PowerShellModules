@@ -1,12 +1,12 @@
 ﻿#Requires -Version 3
-#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding
+#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer
 Set-StrictMode -Version:Latest
 
 Import-Module WebAdministration
 
-Push-Location
-Import-Module SQLPS -DisableNameChecking
-Pop-Location
+#Push-Location
+#Import-Module SQLPS -DisableNameChecking
+#Pop-Location
 
 $defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
 if ($null -eq $defaultDNNVersion) { $defaultDNNVersion = '9.2.2' }
@@ -115,7 +115,7 @@ function Remove-DNNSite {
     Write-Information "$www\$siteName does not exist"
   }
 
-  if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(Encode-SQLName $siteName)") {
+  if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)") {
     Write-Information "Closing connections to $siteName database"
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
     Write-Information "Dropping $siteName database"
@@ -125,7 +125,7 @@ function Remove-DNNSite {
     Write-Information "$siteName database not found"
   }
 
-  if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$siteName")") {
+  if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$siteName")") {
     Write-Information "Dropping IIS AppPool\$siteName database login"
     Invoke-Sqlcmd -Query:"DROP LOGIN [IIS AppPool\$siteName];" -Database:master
   }
@@ -193,7 +193,7 @@ function Rename-DNNSite {
 
   Set-ItemProperty IIS:\Sites\$newSiteName -Name ApplicationPool -Value $newSiteName
 
-  if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(Encode-SQLName $oldSiteName)") {
+  if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $oldSiteName)") {
     Write-Information "Closing connections to $oldSiteName database"
     Invoke-Sqlcmd -Query:"ALTER DATABASE [$oldSiteName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
     Write-Information "Renaming $oldSiteName database to $newSiteName"
@@ -204,7 +204,7 @@ function Rename-DNNSite {
     Write-Information "$oldSiteName database not found"
   }
 
-  if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$newSiteName")")) {
+  if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$newSiteName")")) {
     Write-Information "Creating SQL Server login for IIS AppPool\$newSiteName"
     Invoke-Sqlcmd -Query:"CREATE LOGIN [IIS AppPool\$newSiteName] FROM WINDOWS WITH DEFAULT_DATABASE = [$newSiteName];" -Database:master
   }
@@ -221,7 +221,7 @@ function Rename-DNNSite {
 
   Invoke-Sqlcmd -Query:"DROP USER [IIS AppPool\$oldSiteName];" -Database:$newSiteName
 
-  if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$oldSiteName")") {
+  if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$oldSiteName")") {
     Write-Information "Dropping IIS AppPool\$oldSiteName database login"
     Invoke-Sqlcmd -Query:"DROP LOGIN [IIS AppPool\$oldSiteName];" -Database:master
   }
@@ -450,7 +450,7 @@ function New-DNNSite {
     else {
       $oq = ''
     }
-    $catalookSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(Encode-SQLName $siteName)\Tables\$databaseOwner.${oq}CAT_Settings"
+    $catalookSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}CAT_Settings"
     if (Test-Path $catalookSettingsTablePath) {
       Write-Information "Setting Catalook to test mode"
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'CAT_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$siteName
@@ -501,7 +501,7 @@ function New-DNNSite {
   $webConfig.configuration['system.web'].compilation.debug = 'true'
   $webConfig.Save("$www\$siteName\Website\web.config")
 
-  if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(Encode-SQLName "IIS AppPool\$siteName")")) {
+  if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$siteName")")) {
     Write-Information "Creating SQL Server login for IIS AppPool\$siteName"
     Invoke-Sqlcmd -Query:"CREATE LOGIN [IIS AppPool\$siteName] FROM WINDOWS WITH DEFAULT_DATABASE = [$siteName];" -Database:master
   }

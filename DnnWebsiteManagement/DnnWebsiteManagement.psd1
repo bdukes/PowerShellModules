@@ -12,7 +12,7 @@
     RootModule        = 'DnnWebsiteManagement.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.3.1'
+    ModuleVersion     = '1.4.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -27,13 +27,13 @@
     CompanyName       = 'Engage Software'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2021 Engage Software'
+    Copyright         = '(c) 2022 Engage Software'
 
     # Description of the functionality provided by this module
     Description       = "A set of functions for managing websites built on the DNN Platform."
 
     # Minimum version of the Windows PowerShell engine required by this module
-    PowerShellVersion = '3.0.0'
+    PowerShellVersion = '5.0.0'
 
     # Name of the Windows PowerShell host required by this module
     # PowerShellHostName = ''
@@ -55,7 +55,8 @@
         @{ ModuleName = 'Add-HostFileEntry'; ModuleVersion = '1.0.3' },
         @{ ModuleName = 'SslWebBinding'; ModuleVersion = '1.1.0' },
         @{ ModuleName = 'Write-HtmlNode'; ModuleVersion = '1.0.0' },
-        @{ ModuleName = 'ACL-Permissions'; ModuleVersion = '1.0.0' } )
+        @{ ModuleName = 'ACL-Permissions'; ModuleVersion = '1.0.0' },
+        @{ ModuleName = 'SqlServer'; ModuleVersion = '21.1.18256' } )
 
     # Assemblies that must be loaded prior to importing this module
     # RequiredAssemblies = @()
