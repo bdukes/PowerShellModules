@@ -13,6 +13,7 @@ function getPort([string]$bindingInformation) {
 }
 
 function New-SslWebBinding {
+  [CmdletBinding(SupportsShouldProcess)]
   param(
     [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
@@ -39,21 +40,24 @@ function New-SslWebBinding {
     if ($existingBindings.Length -gt 0) {
       foreach ($existingBinding in $existingBindings) {
         $domain = getHostHeader($existingBinding.bindingInformation);
-        Write-Warning "Removing binding for https://$domain to $siteName";
-        Remove-IISSiteBinding -Name:$siteName -BindingInformation:$existingBinding.bindingInformation -Protocol:https;
+        if ($PSCmdlet.ShouldProcess($domain, 'Remove Binding')) {
+          Remove-IISSiteBinding -Name:$siteName -BindingInformation:$existingBinding.bindingInformation -Protocol:https;
+        }
       }
     }
 
     foreach ($domain in $hostHeader) {
-      Write-Information "Trusting generated SSL certificate for $hostHeader"; #based on https://stackoverflow.com/a/21001534
-      $cert = New-SelfSignedCertificate -DnsName:$hostHeader -CertStoreLocation:'Cert:\LocalMachine\My'
-      $store = New-Object System.Security.Cryptography.X509Certificates.X509Store 'Root', 'CurrentUser';
-      $store.Open('ReadWrite');
-      $store.Add($cert);
-      $store.Close();
+      if ($PSCmdlet.ShouldProcess($domain)) {
+        Write-Information "Trusting generated SSL certificate for $hostHeader"; #based on https://stackoverflow.com/a/21001534
+        $cert = New-SelfSignedCertificate -DnsName:$hostHeader -CertStoreLocation:'Cert:\LocalMachine\My'
+        $store = New-Object System.Security.Cryptography.X509Certificates.X509Store 'Root', 'CurrentUser';
+        $store.Open('ReadWrite');
+        $store.Add($cert);
+        $store.Close();
 
-      Write-Information "Adding binding for https://$domain to $siteName";
-      New-IISSiteBinding -Name:$siteName -BindingInformation:"*:443:$domain" -Protocol:https -SslFlag:'Sni' -CertificateThumbPrint:$cert.Thumbprint -CertStoreLocation:'Cert:\LocalMachine\My';
+        Write-Information "Adding binding for https://$domain to $siteName";
+        New-IISSiteBinding -Name:$siteName -BindingInformation:"*:443:$domain" -Protocol:https -SslFlag:'Sni' -CertificateThumbPrint:$cert.Thumbprint -CertStoreLocation:'Cert:\LocalMachine\My';
+      }
     }
   }
 
@@ -70,6 +74,7 @@ function New-SslWebBinding {
 }
 
 function Remove-SslWebBinding {
+  [CmdletBinding(SupportsShouldProcess)]
   param(
     [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
@@ -84,7 +89,9 @@ function Remove-SslWebBinding {
   }
 
   foreach ($existingBinding in @($hostHeader | Foreach-Object { Get-IISSiteBinding -Name:$siteName -Protocol:https } | Where-Object { getHostHeader($_.BindingInformation) -eq $_ })) {
-    Remove-IISSiteBinding -Name:$siteName -BindingInformation:$existingBinding.BindingInformation -Protocol:https -ErrorAction:Continue;
+    if ($PSCmdlet.ShouldProcess($existingBinding.BindingInformation)) {
+      Remove-IISSiteBinding -Name:$siteName -BindingInformation:$existingBinding.BindingInformation -Protocol:https -ErrorAction:Continue;
+    }
   }
 
   <#

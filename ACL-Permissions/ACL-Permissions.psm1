@@ -29,6 +29,7 @@ function Repair-AclCorruption {
 }
 
 function Set-ModifyPermission {
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [parameter(Mandatory = $true, position = 0)]$directory,
         [parameter(Mandatory = $true, position = 1)]$username,
@@ -53,10 +54,12 @@ function Set-ModifyPermission {
 
     $accessrule = New-Object system.security.AccessControl.FileSystemAccessRule($user, "Modify", $inherit, $propagation, "Allow")
 
-    Repair-AclCorruption $directory
-    $acl = Get-Acl $directory
-    $acl.AddAccessRule($accessrule)
-    set-acl -aclobject $acl $directory
+    if ($PSCmdlet.ShouldProcess($directory)) {
+        Repair-AclCorruption $directory
+        $acl = Get-Acl $directory
+        $acl.AddAccessRule($accessrule)
+        set-acl -aclobject $acl $directory
+    }
     <#
 .SYNOPSIS
     Gives the given user the modify permission to the given directory

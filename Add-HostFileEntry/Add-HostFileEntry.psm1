@@ -3,6 +3,7 @@
 Set-StrictMode -Version:Latest
 
 function Add-HostFileEntry {
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [parameter(Mandatory = $true, position = 0)]
         [string]$hostName,
@@ -20,12 +21,14 @@ function Add-HostFileEntry {
     if (-not $existingEntry) {
         if ($hostsContent -notmatch "`n\s*$") {
             # Add line break if missing from last line
-            Write-Verbose -Message "Adding blank line to $hostsLocation";
-            Add-Content -Path $hostsLocation -Value '';
+            if ($PSCmdlet.ShouldProcess($hostsLocation, 'Add Blank Line')) {
+                Add-Content -Path $hostsLocation -Value '';
+            }
         }
 
-        Write-Verbose -Message "Adding entry mapping $hostName to $ipAddress to $hostsLocation";
-        Add-Content -Path $hostsLocation -Value "$ipAddress`t`t$hostName";
+        if ($PSCmdlet.ShouldProcess($hostsLocation, "Add entry mapping $hostName to $ipAddress")) {
+            Add-Content -Path $hostsLocation -Value "$ipAddress`t`t$hostName";
+        }
     }
     else {
         Write-Verbose -Message "Entry mapping $hostName to $ipAddress already exists in $hostsLocation";
@@ -43,6 +46,7 @@ function Add-HostFileEntry {
 }
 
 function Remove-HostFileEntry {
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [parameter(Mandatory = $true, position = 0)]
         [string]$hostName,
@@ -55,11 +59,12 @@ function Remove-HostFileEntry {
     $ipRegex = [regex]::Escape($ipAddress);
     $hostRegex = [regex]::Escape($hostName);
 
-    Write-Verbose -Message "Removing entry mapping $hostName to $ipAddress from $hostsLocation";
     $oldHostsContent = Get-Content -Path $hostsLocation -Raw
     $newHostsFileContent = $oldHostsContent | ForEach-Object { $_ -replace "(?:`n|\A)\s*$ipRegex\s+$hostRegex\s*(?:`n|\Z)", "`n" };
 
-    [System.IO.File]::WriteAllText($hostsLocation, $newHostsFileContent)
+    if ($PSCmdlet.ShouldProcess($hostsLocation, "Remove entry mapping $hostName to $ipAddress")) {
+        [System.IO.File]::WriteAllText($hostsLocation, $newHostsFileContent);
+    }
     <#
 .SYNOPSIS
     Removes an entry from the HOSTS file

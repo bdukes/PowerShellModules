@@ -4,12 +4,17 @@
   - DnnWebsiteManagement 1.4.0
     - Add more protection scripts when restoring
     - Update default DNN version to 9.10.2
+    - Implement ShouldProcess (i.e. `-WhatIf` and `-Confirm`) for `New-DNNSite` and `Remove-DNNSite`
     - Use SqlServer module instead of SQLPS
     - Use IisAdministration module instead of WebAdministration
   - ACL-Permissions 1.1.0
+    - Implement ShouldProcess (i.e. `-WhatIf` and `-Confirm`) for `Set-ModifyPermission`
     - Use IisAdministration module instead of WebAdministration
   - SslWebBinding 1.2.0
+    - Implement ShouldProcess (i.e. `-WhatIf` and `-Confirm`) for `New-SslWebBinding` and `Remove-SslWebBinding`
     - Use IisAdministration module instead of WebAdministration
+  - Add-HostFileEntry 1.1.0
+    - Implement ShouldProcess (i.e. `-WhatIf` and `-Confirm`) for `Add-HostFileEntry` and `Remove-HostFileEntry`
 - September 2021
   - Declare platform compatibility
     - ACL-Permissions 1.0.2

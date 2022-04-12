@@ -1,5 +1,5 @@
 ﻿#Requires -Version 3
-#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
+#Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
 
 $defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
@@ -67,6 +67,7 @@ function Install-DNNResources {
 }
 
 function Remove-DNNSite {
+  [CmdletBinding(SupportsShouldProcess)]
   param(
     [parameter(Mandatory = $true, position = 0)]
     [string]$siteName
@@ -75,19 +76,24 @@ function Remove-DNNSite {
   Assert-AdministratorRole
 
   #TODO: remove certificate
-  Remove-SslWebBinding $siteName
+  if ($PSCmdlet.ShouldProcess($siteName, 'Remove HTTPS Binding')) {
+    Remove-SslWebBinding $siteName;
+  }
 
   $website = Get-IISSite $siteName;
   if ($website) {
     foreach ($binding in $website.Bindings) {
       if ($binding.sslFlags -eq 1) {
         $hostHeader = $binding.bindingInformation.Substring(6) #remove "*:443:" from the beginning of the binding info
-        Remove-SslWebBinding $siteName $hostHeader
+        if ($PSCmdlet.ShouldProcess($hostHeader, 'Remove HTTPS Binding')) {
+          Remove-SslWebBinding $siteName $hostHeader;
+        }
       }
     }
 
-    Write-Information "Removing $siteName website from IIS"
-    Remove-IISSite $siteName
+    if ($PSCmdlet.ShouldProcess($siteName, 'Remove IIS Site')) {
+      Remove-IISSite $siteName;
+    }
   }
 
   $serverManager = Get-IISServerManager
@@ -95,41 +101,47 @@ function Remove-DNNSite {
   if ($appPool) {
     Write-Information "Removing $siteName app pool from IIS"
 
-    $appPool.Delete();
-    $serverManager.CommitChanges();
+    if ($PSCmdlet.ShouldProcess($siteName, 'Remove IIS App Pool')) {
+      $appPool.Delete();
+      $serverManager.CommitChanges();
+    }
   }
   else {
     Write-Information "$siteName app pool not found in IIS"
   }
 
   if (Test-Path $www\$siteName) {
-    Write-Information "Deleting $www\$siteName"
-    Remove-Item $www\$siteName -Recurse -Force
+    if ($PSCmdlet.ShouldProcess($siteName, "Remove $www\$siteName")) {
+      Remove-Item $www\$siteName -Recurse -Force -WhatIf:$WhatIfPreference -Confirm:$false;
+    }
   }
   else {
     Write-Information "$www\$siteName does not exist"
   }
 
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)") {
-    Write-Information "Closing connections to $siteName database"
-    Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
-    Write-Information "Dropping $siteName database"
-    Invoke-Sqlcmd -Query:"DROP DATABASE [$siteName];" -ServerInstance:. -Database:master
+    if ($PSCmdlet.ShouldProcess($siteName, 'Drop Database')) {
+      Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master
+      Invoke-Sqlcmd -Query:"DROP DATABASE [$siteName];" -ServerInstance:. -Database:master
+    }
   }
   else {
     Write-Information "$siteName database not found"
   }
 
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$siteName")") {
-    Write-Information "Dropping IIS AppPool\$siteName database login"
-    Invoke-Sqlcmd -Query:"DROP LOGIN [IIS AppPool\$siteName];" -Database:master
+    if ($PSCmdlet.ShouldProcess("IIS AppPool\$siteName", 'Drop login')) {
+      Invoke-Sqlcmd -Query:"DROP LOGIN [IIS AppPool\$siteName];" -Database:master
+    }
   }
   else {
     Write-Information "IIS AppPool\$siteName database login not found"
   }
 
   #TODO: remove all host entries added during restore
-  Remove-HostFileEntry $siteName
+  if ($PSCmdlet.ShouldProcess($siteName, 'Remove HOSTS file entry')) {
+    Remove-HostFileEntry $siteName -WhatIf:$WhatIfPreference -Confirm:$false;
+  }
 
   <#
 .SYNOPSIS
@@ -329,6 +341,7 @@ function Upgrade-DNNSite {
 }
 
 function New-DNNSite {
+  [CmdletBinding(SupportsShouldProcess)]
   param(
     [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
@@ -348,44 +361,53 @@ function New-DNNSite {
 
   $siteNameExtension = [System.IO.Path]::GetExtension($siteName)
   if ($siteNameExtension -eq '') { $siteNameExtension = '.local' }
-  extractPackages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -SiteZip:$siteZip
 
-  Write-Information "Creating HOSTS file entry for $siteName"
-  Add-HostFileEntry $siteName
+  if ($PSCmdlet.ShouldProcess($siteName, 'Extract Package')) {
+    extractPackages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -SiteZip:$siteZip
+  }
+
+  if ($PSCmdlet.ShouldProcess($siteName, 'Add HOSTS file entry')) {
+    Add-HostFileEntry $siteName
+  }
 
   $serverManager = Get-IISServerManager;
-  Write-Information "Creating IIS app pool"
-  $serverManager.ApplicationPools.Add($siteName);
-  $serverManager.CommitChanges();
-  Write-Information "Creating IIS site"
-  $website = $serverManager.Sites.Add($siteName, 'http', "*:80:$siteName", "$www\$siteName\Website");
-  $website.Applications['/'].ApplicationPoolName = $siteName;
-  $serverManager.CommitChanges();
+  if ($PSCmdlet.ShouldProcess($siteName, 'Create IIS App Pool')) {
+    $serverManager.ApplicationPools.Add($siteName);
+    $serverManager.CommitChanges();
+  }
+  if ($PSCmdlet.ShouldProcess($siteName, 'Create IIS Site')) {
+    $website = $serverManager.Sites.Add($siteName, 'http', "*:80:$siteName", "$www\$siteName\Website");
+    $website.Applications['/'].ApplicationPoolName = $siteName;
+    $serverManager.CommitChanges();
+  }
 
   $domains = New-Object System.Collections.Generic.List[System.String]
   $domains.Add($siteName)
 
   Write-Information "Setting modify permission on website files for IIS AppPool\$siteName"
-  Set-ModifyPermission $www\$siteName\Website $siteName
+  Set-ModifyPermission $www\$siteName\Website $siteName -WhatIf:$WhatIfPreference -Confirm:$ConfirmPreference;
 
   [xml]$webConfig = Get-Content $www\$siteName\Website\web.config
   if ($databaseBackup -eq '') {
-    Write-Information "Creating new database"
-    newDnnDatabase $siteName
+    if ($PSCmdlet.ShouldProcess($siteName, 'Create Database')) {
+      newDnnDatabase $siteName
+    }
     # TODO: create schema if $databaseOwner has been passed in
   }
   else {
-    Write-Information "Restoring database"
-    restoreDnnDatabase $siteName (Get-Item $databaseBackup).FullName
-    Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET RECOVERY SIMPLE"
+    if ($PSCmdlet.ShouldProcess($databaseBackup, 'Restore Database')) {
+      restoreDnnDatabase $siteName (Get-Item $databaseBackup).FullName
+      Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET RECOVERY SIMPLE"
+    }
 
     $objectQualifier = $webConfig.configuration.dotnetnuke.data.providers.add.objectQualifier.TrimEnd('_')
     $databaseOwner = $webConfig.configuration.dotnetnuke.data.providers.add.databaseOwner.TrimEnd('.')
 
     if ($oldDomain -ne '') {
-      Write-Information "Updating portal aliases"
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$oldDomain', '$siteName')" -Database:$siteName
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = REPLACE(SettingValue, '$oldDomain', '$siteName') WHERE SettingName = 'DefaultPortalAlias'" -Database:$siteName
+      if ($PSCmdlet.ShouldProcess($siteName, 'Update Portal Aliases')) {
+        Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$oldDomain', '$siteName')" -Database:$siteName
+        Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = REPLACE(SettingValue, '$oldDomain', '$siteName') WHERE SettingName = 'DefaultPortalAlias'" -Database:$siteName
+      }
 
       $aliases = Invoke-Sqlcmd -Query:"SELECT HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) WHERE HTTPAlias != '$siteName'" -Database:$siteName
       foreach ($aliasRow in $aliases) {
@@ -420,15 +442,21 @@ function New-DNNSite {
           if ($childAlias) {
             $newAlias = $newAlias + '/' + $childAlias
           }
-          Write-Verbose "Changing $alias to $newAlias"
-          Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$siteName
+
+          if ($PSCmdlet.ShouldProcess($newAlias, 'Rename alias')) {
+            Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$siteName
+          }
         }
 
         $existingBinding = Get-IISSiteBinding -Name:$siteName -BindingInformation:"*:$($port):$aliasHost" -Protocol:http
         if ($null -eq $existingBinding) {
           Write-Verbose "Setting up IIS binding and HOSTS entry for $aliasHost"
-          New-IISSiteBinding -Name:$siteName -BindingInformation:"*:$($port):$aliasHost" -Protocol:http
-          Add-HostFileEntry $aliasHost
+          if ($PSCmdlet.ShouldProcess($aliasHost, 'Create IIS Site Binding')) {
+            New-IISSiteBinding -Name:$siteName -BindingInformation:"*:$($port):$aliasHost" -Protocol:http -Confirm:$false;
+          }
+          if ($PSCmdlet.ShouldProcess($aliasHost, 'Add HOSTS file entry')) {
+            Add-HostFileEntry $aliasHost -WhatIf:$WhatIfPreference -Confirm:$false;
+          }
         }
         else {
           Write-Verbose "IIS binding already exists for $aliasHost"
@@ -446,99 +474,116 @@ function New-DNNSite {
     }
 
     $catalookSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}CAT_Settings"
-    if (Test-Path $catalookSettingsTablePath) {
-      Write-Information "Setting Catalook to test mode"
+    if (Test-Path $catalookSettingsTablePath -and $PSCmdlet.ShouldProcess($siteName, 'Set Catalook to test mode')) {
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'CAT_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$siteName
     }
 
     $esmSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Settings"
-    if (Test-Path $esmSettingsTablePath) {
-      Write-Information "Setting FattMerchant to test mode"
+    if (Test-Path $esmSettingsTablePath -and $PSCmdlet.ShouldProcess($siteName, 'Set FattMerchant to test mode')) {
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET MerchantRegistrationStatusId = null, FattmerchantMerchantId = null, FattmerchantApiKey = '${env:FattmerchantTestApiKey}', FattmerchantPaymentsToken = '${env:FattmerchantTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$siteName
     }
 
     $esmParticipantTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Participant"
-    if (Test-Path $esmParticipantTablePath) {
-      Write-Information "Turn off payment processing for Engage: AMS"
+    if (Test-Path $esmParticipantTablePath -and $PSCmdlet.ShouldProcess($siteName, 'Turn off payment processing for Engage: AMS')) {
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Participant' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PaymentProcessorCustomerId = NULL" -Database:$siteName
     }
 
-    $liveCampaignSettingTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}LiveCampaign_Setting"
-    if (Test-Path $liveCampaignSettingTablePath) {
-      Write-Information "Turn off SMTP for Mandeeps Live Campaign"
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_Setting' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SMTPServerMode = 'DNNHostSettings', SendGridAPI = NULL WHERE SMTPServerMode = 'Sendgrid'" -Database:$siteName
+    if ($PSCmdlet.ShouldProcess($siteName, 'Turn off SMTP for Mandeeps Live Campaign')) {
+      $liveCampaignSettingTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}LiveCampaign_Setting"
+      if (Test-Path $liveCampaignSettingTablePath) {
+        Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_Setting' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SMTPServerMode = 'DNNHostSettings', SendGridAPI = NULL WHERE SMTPServerMode = 'Sendgrid'" -Database:$siteName
+      }
+
+      $liveCampaignSmtpTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}LiveCampaign_SmtpServer"
+      if (Test-Path $liveCampaignSmtpTablePath) {
+        Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_SmtpServer' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET Server = 'localhost', Username = '', Password = ''" -Database:$siteName
+      }
     }
 
-    $liveCampaignSmtpTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}LiveCampaign_SmtpServer"
-    if (Test-Path $liveCampaignSmtpTablePath) {
-      Write-Information "Turn off SMTP for Mandeeps Live Campaign"
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_SmtpServer' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET Server = 'localhost', Username = '', Password = ''" -Database:$siteName
-    }
-
-    if (Test-Path $www\$siteName\Website\DesktopModules\EngageSports) {
-      Write-Information 'Updating Engage: Sports wizard URLs'
+    if (Test-Path $www\$siteName\Website\DesktopModules\EngageSports -and $PSCmdlet.ShouldProcess($siteName, 'Update Engage: Sports wizard URLs')) {
       updateWizardUrls $siteName
     }
 
     Write-Information "Setting SMTP to localhost"
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$siteName
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$siteName
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$siteName
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$siteName
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$siteName
+    if ($PSCmdlet.ShouldProcess($siteName, 'Set SMTP to localhost')) {
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$siteName
 
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$siteName
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$siteName
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$siteName
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$siteName
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$siteName
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$siteName
+    }
 
-    Write-Information 'Clearing WebServers table'
-    Invoke-Sqlcmd -Query:"TRUNCATE TABLE $(getDnnDatabaseObjectName -objectName:'WebServers' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier)" -Database:$siteName
+    if ($PSCmdlet.ShouldProcess($siteName, 'Clear WebServers table')) {
+      Invoke-Sqlcmd -Query:"TRUNCATE TABLE $(getDnnDatabaseObjectName -objectName:'WebServers' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier)" -Database:$siteName
+    }
 
-    Write-Information "Turning off event log buffer"
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'EventLogBuffer'" -Database:$siteName
+    if ($PSCmdlet.ShouldProcess($siteName, 'Turn off event log buffer')) {
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'EventLogBuffer'" -Database:$siteName
+    }
 
-    Write-Information "Turning off search crawler"
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'Schedule' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET Enabled = 0 WHERE TypeFullName = 'DotNetNuke.Professional.SearchCrawler.SearchSpider.SearchSpider, DotNetNuke.Professional.SearchCrawler'" -Database:$siteName
+    if ($PSCmdlet.ShouldProcess($siteName, 'Turn off search crawler')) {
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'Schedule' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET Enabled = 0 WHERE TypeFullName = 'DotNetNuke.Professional.SearchCrawler.SearchSpider.SearchSpider, DotNetNuke.Professional.SearchCrawler'" -Database:$siteName
+    }
 
-    Write-Information "Setting all passwords to 'pass'"
-    Invoke-Sqlcmd -Query:"UPDATE aspnet_Membership SET PasswordFormat = 0, Password = 'pass'" -Database:$siteName
+    if ($PSCmdlet.ShouldProcess($siteName, "Set all passwords to 'pass'")) {
+      Invoke-Sqlcmd -Query:"UPDATE aspnet_Membership SET PasswordFormat = 0, Password = 'pass'" -Database:$siteName
+    }
 
-    Write-Information "Watermarking site logo(s)"
-    watermarkLogos $siteName $siteNameExtension
+    if ($PSCmdlet.ShouldProcess($siteName, 'Watermark site logo(s)')) {
+      watermarkLogos $siteName $siteNameExtension
+    }
 
-    if (Test-Path "$www\$siteName\Website\ApplicationInsights.config") {
-      Write-Information "Remove Application Insights config"
-      Remove-Item "$www\$siteName\Website\ApplicationInsights.config"
+    if (Test-Path "$www\$siteName\Website\ApplicationInsights.config" -and $PSCmdlet.ShouldProcess($siteName, 'Remove Application Insights config')) {
+      Remove-Item "$www\$siteName\Website\ApplicationInsights.config" -WhatIf:$WhatIfPreference -Confirm:$false;
     }
   }
 
-  $connectionString = "Data Source=.`;Initial Catalog=$siteName`;Integrated Security=true"
-  $webConfig.configuration.connectionStrings.add | Where-Object { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $connectionString }
-  $webConfig.configuration.appSettings.add | Where-Object { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }
+  if ($PSCmdlet.ShouldProcess($siteName, 'Set connectionString in web.config')) {
+    $connectionString = "Data Source=.`;Initial Catalog=$siteName`;Integrated Security=true"
+    $webConfig.configuration.connectionStrings.add | Where-Object { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $connectionString }
+    $webConfig.configuration.appSettings.add | Where-Object { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }
+    $webConfig.Save("$www\$siteName\Website\web.config")
+  }
 
-  Write-Information "Updating web.config with connection string and data provider attributes"
-  $webConfig.configuration.dotnetnuke.data.providers.add | Where-Object { $_.name -eq 'SqlDataProvider' } | ForEach-Object { $_.objectQualifier = $objectQualifier; $_.databaseOwner = $databaseOwner }
-  Write-Information "Updating web.config to allow short passwords"
-  $webConfig.configuration['system.web'].membership.providers.add | Where-Object { $_.type -eq 'System.Web.Security.SqlMembershipProvider' } | ForEach-Object { $_.minRequiredPasswordLength = '4' }
-  Write-Information "Updating web.config to turn on debug mode"
-  $webConfig.configuration['system.web'].compilation.debug = 'true'
-  $webConfig.Save("$www\$siteName\Website\web.config")
+  if ($PSCmdlet.ShouldProcess($siteName, 'Set objectQualifier and databaseOwner in web.config')) {
+    $webConfig.configuration.dotnetnuke.data.providers.add | Where-Object { $_.name -eq 'SqlDataProvider' } | ForEach-Object { $_.objectQualifier = $objectQualifier; $_.databaseOwner = $databaseOwner }
+    $webConfig.Save("$www\$siteName\Website\web.config")
+  }
 
-  if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$siteName")")) {
-    Write-Information "Creating SQL Server login for IIS AppPool\$siteName"
+  if ($PSCmdlet.ShouldProcess($siteName, 'Update web.config to allow short passwords')) {
+    $webConfig.configuration['system.web'].membership.providers.add | Where-Object { $_.type -eq 'System.Web.Security.SqlMembershipProvider' } | ForEach-Object { $_.minRequiredPasswordLength = '4' }
+    $webConfig.Save("$www\$siteName\Website\web.config")
+  }
+
+  if ($PSCmdlet.ShouldProcess($siteName, 'Turn on debug mode in web.config')) {
+    $webConfig.configuration['system.web'].compilation.debug = 'true'
+    $webConfig.Save("$www\$siteName\Website\web.config")
+  }
+
+  if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$siteName")") -and $PSCmdlet.ShouldProcess("IIS AppPool\$siteName", 'Create SQL Server login')) {
     Invoke-Sqlcmd -Query:"CREATE LOGIN [IIS AppPool\$siteName] FROM WINDOWS WITH DEFAULT_DATABASE = [$siteName];" -Database:master
   }
-  Write-Information "Creating SQL Server user"
-  Invoke-Sqlcmd -Query:"CREATE USER [IIS AppPool\$siteName] FOR LOGIN [IIS AppPool\$siteName];" -Database:$siteName
-  Write-Information "Adding SQL Server user to db_owner role"
-  Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'IIS AppPool\$siteName';" -Database:$siteName
 
-  New-SslWebBinding $siteName $domains
+  if ($PSCmdlet.ShouldProcess("IIS AppPool\$siteName", 'Create SQL Server User')) {
+    Invoke-Sqlcmd -Query:"CREATE USER [IIS AppPool\$siteName] FOR LOGIN [IIS AppPool\$siteName];" -Database:$siteName
+  }
+  if ($PSCmdlet.ShouldProcess("IIS AppPool\$siteName", 'Add db_owner role')) {
+    Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'IIS AppPool\$siteName';" -Database:$siteName
+  }
 
-  Write-Information "Launching https://$siteName"
-  Start-Process -FilePath:https://$siteName
+  if ($PSCmdlet.ShouldProcess($siteName, 'Add HTTPS bindings')) {
+    New-SslWebBinding $siteName $domains -WhatIf:$WhatIfPreference -Confirm:$false;
+  }
+
+  if ($PSCmdlet.ShouldProcess("https://$siteName", 'Open browser')) {
+    Start-Process -FilePath:https://$siteName
+  }
 
   <#
 .SYNOPSIS
