@@ -9,28 +9,28 @@
 @{
 
     # Script module or binary module file associated with this manifest.
-    RootModule           = 'SslWebBinding.psm1'
+    RootModule        = 'SslWebBinding.psm1'
 
     # Version number of this module.
-    ModuleVersion        = '1.1.2'
+    ModuleVersion     = '1.2.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @('Desktop')
 
     # ID used to uniquely identify this module
-    GUID                 = 'd8b5b233-6f01-4ade-b771-147cc9101072'
+    GUID              = 'd8b5b233-6f01-4ade-b771-147cc9101072'
 
     # Author of this module
-    Author               = 'Brian Dukes'
+    Author            = 'Brian Dukes'
 
     # Company or vendor of this module
-    CompanyName          = 'Engage Software'
+    CompanyName       = 'Engage Software'
 
     # Copyright statement for this module
-    Copyright            = '(c) 2018 Engage Software'
+    Copyright         = '(c) 2022 Engage Software'
 
     # Description of the functionality provided by this module
-    Description          = 'Adds (and trusts) and removes self-signed HTTPS bindings to websites in IIS'
+    Description       = 'Adds (and trusts) and removes self-signed HTTPS bindings to websites in IIS'
 
     # Minimum version of the Windows PowerShell engine required by this module
     # PowerShellVersion = ''
@@ -51,7 +51,8 @@
     # ProcessorArchitecture = ''
 
     # Modules that must be imported into the global environment prior to importing this module
-    RequiredModules      = @( @{ ModuleName = 'AdministratorRole'; ModuleVersion = '1.0.0' } )
+    RequiredModules   = @( @{ ModuleName = 'AdministratorRole'; ModuleVersion = '1.0.0' },
+        @{ ModuleName = 'IISAdministration'; ModuleVersion = '1.1.0.0' } )
 
     # Assemblies that must be loaded prior to importing this module
     # RequiredAssemblies = @()
@@ -69,16 +70,16 @@
     # NestedModules = @()
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport    = @('New-SslWebBinding', 'Remove-SslWebBinding')
+    FunctionsToExport = @('New-SslWebBinding', 'Remove-SslWebBinding')
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-    CmdletsToExport      = @()
+    CmdletsToExport   = @()
 
     # Variables to export from this module
-    VariablesToExport    = @()
+    VariablesToExport = @()
 
     # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-    AliasesToExport      = @()
+    AliasesToExport   = @()
 
     # DSC resources to export from this module
     # DscResourcesToExport = @()
@@ -87,10 +88,10 @@
     # ModuleList = @()
 
     # List of all files packaged with this module
-    FileList             = 'SslWebBinding.psm1'
+    FileList          = 'SslWebBinding.psm1'
 
     # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
-    PrivateData          = @{
+    PrivateData       = @{
 
         PSData = @{
 

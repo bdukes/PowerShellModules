@@ -56,7 +56,8 @@
         @{ ModuleName = 'SslWebBinding'; ModuleVersion = '1.1.0' },
         @{ ModuleName = 'Write-HtmlNode'; ModuleVersion = '1.0.0' },
         @{ ModuleName = 'ACL-Permissions'; ModuleVersion = '1.0.0' },
-        @{ ModuleName = 'SqlServer'; ModuleVersion = '21.1.18256' } )
+        @{ ModuleName = 'SqlServer'; ModuleVersion = '21.1.18256' },
+        @{ ModuleName = 'IISAdministration'; ModuleVersion = '1.1.0.0' } )
 
     # Assemblies that must be loaded prior to importing this module
     # RequiredAssemblies = @()

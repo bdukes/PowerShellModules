@@ -1,12 +1,6 @@
-﻿#Requires -Version 3
-#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer
+#Requires -Version 3
+#Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
-
-Import-Module WebAdministration
-
-#Push-Location
-#Import-Module SQLPS -DisableNameChecking
-#Pop-Location
 
 $defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
 if ($null -eq $defaultDNNVersion) { $defaultDNNVersion = '9.2.2' }
@@ -83,9 +77,9 @@ function Remove-DNNSite {
   #TODO: remove certificate
   Remove-SslWebBinding $siteName
 
-  if (Test-Path IIS:\Sites\$siteName) {
-    $website = Get-Website $siteName
-    foreach ($binding in $website.Bindings.Collection) {
+  $website = Get-IISSite $siteName;
+  if ($website) {
+    foreach ($binding in $website.Bindings) {
       if ($binding.sslFlags -eq 1) {
         $hostHeader = $binding.bindingInformation.Substring(6) #remove "*:443:" from the beginning of the binding info
         Remove-SslWebBinding $siteName $hostHeader
@@ -93,15 +87,16 @@ function Remove-DNNSite {
     }
 
     Write-Information "Removing $siteName website from IIS"
-    Remove-Website $siteName
-  }
-  else {
-    Write-Information "$siteName website not found in IIS"
+    Remove-IISSite $siteName
   }
 
-  if (Test-Path IIS:\AppPools\$siteName) {
+  $serverManager = Get-IISServerManager
+  $appPool = $serverManager.ApplicationPools[$siteName];
+  if ($appPool) {
     Write-Information "Removing $siteName app pool from IIS"
-    Remove-WebAppPool $siteName
+
+    $appPool.Delete();
+    $serverManager.CommitChanges();
   }
   else {
     Write-Information "$siteName app pool not found in IIS"
@@ -156,8 +151,10 @@ function Rename-DNNSite {
 
   Assert-AdministratorRole
 
-  if ((Test-Path IIS:\AppPools\$oldSiteName) -and (Get-WebAppPoolState $oldSiteName).Value -eq 'Started') {
-    $appPool = Stop-WebAppPool $oldSiteName -Passthru
+  $serverManager = Get-IISServerManager
+  $appPool = $serverManager.ApplicationPools[$oldSiteName]
+  if ($appPool -and $appPool.State -eq 'Started') {
+    $appPool.Stop()
     while ($appPool.State -ne 'Stopped') {
       Start-Sleep -m 100
     }
@@ -171,27 +168,20 @@ function Rename-DNNSite {
     Write-Information "$www\$oldSiteName does not exist"
   }
 
-  Set-ItemProperty IIS:\Sites\$oldSiteName -Name PhysicalPath -Value $www\$newSiteName\Website
-  Remove-WebBinding -Name:$oldSiteName -HostHeader:$oldSiteName
-  New-WebBinding -Name:$oldSiteName -IP:'*' -Port:80 -Protocol:'http' -HostHeader:$newSiteName
+  $website = $serverManager.Sites[$oldSiteName];
+  $app = $website.Applications['/'];
+  $virtualDirectory = $app.VirtualDirectories['/'];
+  $virtualDirectory.PhysicalPath = "$www\$newSiteName\Website";
+  Remove-IISSiteBinding -Name:$oldSiteName -BindingInformation:"*:80:$oldSiteName"
+  New-IISSiteBinding -Name:$oldSiteName -BindingInformation:"*:80:$newSiteName" -Protocol:'http'
 
-  if (Test-Path IIS:\Sites\$oldSiteName) {
-    Write-Information "Renaming $oldSiteName website in IIS to $newSiteName"
-    Rename-Item IIS:\Sites\$oldSiteName $newSiteName
-  }
-  else {
-    Write-Information "$oldSiteName website not found in IIS"
-  }
+  Write-Information "Renaming $oldSiteName site in IIS to $newSiteName"
+  Write-Information "Renaming $oldSiteName app pool in IIS to $newSiteName"
+  $website.Name = $newSiteName;
+  $appPool.Name = $newSiteName;
+  $app.ApplicationPoolName = $newSiteName;
 
-  if (Test-Path IIS:\AppPools\$oldSiteName) {
-    Write-Information "Renaming $oldSiteName app pool in IIS to $newSiteName"
-    Rename-Item IIS:\AppPools\$oldSiteName $newSiteName
-  }
-  else {
-    Write-Information "$oldSiteName app pool not found in IIS"
-  }
-
-  Set-ItemProperty IIS:\Sites\$newSiteName -Name ApplicationPool -Value $newSiteName
+  $serverManager.CommitChanges();
 
   if (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $oldSiteName)") {
     Write-Information "Closing connections to $oldSiteName database"
@@ -244,7 +234,7 @@ function Rename-DNNSite {
   Remove-HostFileEntry $oldSiteName
   Add-HostFileEntry $newSiteName
 
-  Start-WebAppPool $newSiteName
+  $appPool.Start();
 
   Write-Information "Launching https://$newSiteName"
   Start-Process -FilePath:https://$newSiteName
@@ -363,10 +353,14 @@ function New-DNNSite {
   Write-Information "Creating HOSTS file entry for $siteName"
   Add-HostFileEntry $siteName
 
+  $serverManager = Get-IISServerManager;
   Write-Information "Creating IIS app pool"
-  New-WebAppPool $siteName
+  $serverManager.ApplicationPools.Add($siteName);
+  $serverManager.CommitChanges();
   Write-Information "Creating IIS site"
-  New-Website $siteName -HostHeader:$siteName -PhysicalPath:$www\$siteName\Website -ApplicationPool:$siteName
+  $website = $serverManager.Sites.Add($siteName, 'http', "*:80:$siteName", "$www\$siteName\Website");
+  $website.Applications['/'].ApplicationPoolName = $siteName;
+  $serverManager.CommitChanges();
 
   $domains = New-Object System.Collections.Generic.List[System.String]
   $domains.Add($siteName)
@@ -430,10 +424,10 @@ function New-DNNSite {
           Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$siteName
         }
 
-        $existingBinding = Get-WebBinding -Name:$siteName -HostHeader:$aliasHost -Port:$port
+        $existingBinding = Get-IISSiteBinding -Name:$siteName -BindingInformation:"*:$($port):$aliasHost" -Protocol:http
         if ($null -eq $existingBinding) {
           Write-Verbose "Setting up IIS binding and HOSTS entry for $aliasHost"
-          New-WebBinding -Name:$siteName -IP:'*' -Port:$port -Protocol:http -HostHeader:$aliasHost
+          New-IISSiteBinding -Name:$siteName -BindingInformation:"*:$($port):$aliasHost" -Protocol:http
           Add-HostFileEntry $aliasHost
         }
         else {

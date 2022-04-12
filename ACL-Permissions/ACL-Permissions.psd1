@@ -12,7 +12,7 @@
     RootModule        = 'ACL-Permissions.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.0.2'
+    ModuleVersion     = '1.1.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@
     CompanyName       = 'Engage Software'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2017 Engage Software'
+    Copyright         = '(c) 2022 Engage Software'
 
     # Description of the functionality provided by this module
     Description       = 'A couple of ACL utilities, for repairing corrupt permissions and applying permissions for IIS AppPool identities'
@@ -51,7 +51,8 @@
     # ProcessorArchitecture = ''
 
     # Modules that must be imported into the global environment prior to importing this module
-    RequiredModules   = @( @{ ModuleName = 'AdministratorRole'; ModuleVersion = '1.0.0' } )
+    RequiredModules   = @( @{ ModuleName = 'AdministratorRole'; ModuleVersion = '1.0.0' },
+        @{ ModuleName = 'IISAdministration'; ModuleVersion = '1.1.0.0' } )
 
     # Assemblies that must be loaded prior to importing this module
     # RequiredAssemblies = @()

@@ -40,8 +40,10 @@ function Set-ModifyPermission {
     $propagation = [system.security.accesscontrol.PropagationFlags]"None"
 
     if ($domain -eq 'IIS APPPOOL') {
-        Import-Module WebAdministration
-        $sid = (Get-ItemProperty IIS:\AppPools\$username).ApplicationPoolSid
+        Import-Module IisAdministration;
+        $serverManager = Get-IISServerManager;
+        $appPool = $serverManager.APplicationPools[$username];
+        $sid = $appPool.attributes['applicationPoolSid'].Value;
         $identifier = New-Object System.Security.Principal.SecurityIdentifier($sid)
         $user = $identifier.Translate([System.Security.Principal.NTAccount])
     }

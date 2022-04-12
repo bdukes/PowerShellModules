@@ -1,5 +1,14 @@
 # Change Log
 
+- April 2022
+  - DnnWebsiteManagement 1.4.0
+    - Add more protection scripts when restoring
+    - Use SqlServer module instead of SQLPS
+    - Use IisAdministration module instead of WebAdministration
+  - ACL-Permissions 1.1.0
+    - Use IisAdministration module instead of WebAdministration
+  - SslWebBinding 1.2.0
+    - Use IisAdministration module instead of WebAdministration
 - September 2021
   - Declare platform compatibility
     - ACL-Permissions 1.0.2

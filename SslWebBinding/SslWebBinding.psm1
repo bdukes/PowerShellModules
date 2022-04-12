@@ -1,8 +1,16 @@
 ﻿#Requires -Version 3
-#Requires -Modules WebAdministration, AdministratorRole, PKI
+#Requires -Modules IISAdministration, AdministratorRole, PKI
 Set-StrictMode -Version:Latest
 
-Import-Module WebAdministration
+Import-Module IISAdministration
+
+function getHostHeader([string]$bindingInformation) {
+  return $bindingInformation.Substring($bindingInformation.LastIndexOf(':') + 1);
+}
+function getPort([string]$bindingInformation) {
+  $firstSeparatorIndex = $bindingInformation.IndexOf(':');
+  return $bindingInformation.Substring($firstSeparatorIndex + 1, $bindingInformation.LastIndexOf(':') - $firstSeparatorIndex - 1);
+}
 
 function New-SslWebBinding {
   param(
@@ -20,53 +28,33 @@ function New-SslWebBinding {
 
   $hostHeader = $hostHeader | Select-Object -Unique
 
-  $existingBindings = @($hostHeader | Foreach-Object { Get-WebBinding -Name:$siteName -HostHeader:$_ -Protocol:https })
+  $existingBindings = @($hostHeader | Foreach-Object { Get-IISSiteBinding -Name:$siteName -Protocol:https } | Where-Object { getHostHeader($_.BindingInformation) -eq $_ });
   if ($existingBindings.Length -eq $hostHeader.Length) {
     foreach ($existingBinding in $existingBindings) {
-      $domain = $existingBinding.bindingInformation -replace '^.*:.*:', ''
-      Write-Warning "Binding for https://$domain to $siteName already exists"
+      $domain = getHostHeader($existingBinding.bindingInformation);
+      Write-Warning "Binding for https://$domain to $siteName already exists";
     }
   }
   else {
     if ($existingBindings.Length -gt 0) {
       foreach ($existingBinding in $existingBindings) {
-        $domain = $existingBinding.bindingInformation -replace '^.*:.*:', ''
-        Write-Warning "Removing binding for https://$domain to $siteName"
-        Remove-WebBinding -Name:$siteName -HostHeader:$domain -Protocol:https
+        $domain = getHostHeader($existingBinding.bindingInformation);
+        Write-Warning "Removing binding for https://$domain to $siteName";
+        Remove-IISSiteBinding -Name:$siteName -BindingInformation:$existingBinding.bindingInformation -Protocol:https;
       }
     }
 
     foreach ($domain in $hostHeader) {
-      Write-Information "Adding binding for https://$domain to $siteName"
-      New-WebBinding -Name:$siteName -HostHeader:$domain -Protocol:https -SslFlags:1
-    }
-  }
+      Write-Information "Trusting generated SSL certificate for $hostHeader"; #based on https://stackoverflow.com/a/21001534
+      $cert = New-SelfSignedCertificate -DnsName:$hostHeader -CertStoreLocation:'Cert:\LocalMachine\My'
+      $store = New-Object System.Security.Cryptography.X509Certificates.X509Store 'Root', 'CurrentUser';
+      $store.Open('ReadWrite');
+      $store.Add($cert);
+      $store.Close();
 
-  $existingCertBindings = @($hostHeader | Foreach-Object { Get-Item -Path:"IIS:\SslBindings\!443!$_" -ErrorAction SilentlyContinue })
-  if ($existingCertBindings.Length -eq $hostHeader.Length) {
-    foreach ($existingBinding in $existingBindings) {
-      $domain = $existingBinding.bindingInformation -replace '^.*:.*:', ''
-      Write-Warning "Certificate binding for https://$domain already exists"
+      Write-Information "Adding binding for https://$domain to $siteName";
+      New-IISSiteBinding -Name:$siteName -BindingInformation:"*:443:$domain" -Protocol:https -SslFlag:'Sni' -CertificateThumbPrint:$cert.Thumbprint -CertStoreLocation:'Cert:\LocalMachine\My';
     }
-  }
-  else {
-    if ($existingCertBindings.Length -gt 0) {
-      foreach ($binding in $existingCertBindings) {
-        Remove-Item -Path:"IIS:\SslBindings\!443!$($binding.Host)"
-      }
-    }
-
-    $cert = New-SelfSignedCertificate -DnsName:$hostHeader -CertStoreLocation:'Cert:\LocalMachine\My'
-
-    foreach ($domain in $hostHeader) {
-      New-Item -Path:"IIS:\SslBindings\!443!$domain" -Value:$cert -SSLFlags:1
-    }
-
-    Write-Information "Trusting generated SSL certificate for $hostHeader" #based on https://stackoverflow.com/a/21001534
-    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store 'Root', 'CurrentUser'
-    $store.Open('ReadWrite')
-    $store.Add($cert)
-    $store.Close()
   }
 
   <#
@@ -95,9 +83,8 @@ function Remove-SslWebBinding {
     $hostHeader = @($siteName)
   }
 
-  foreach ($domain in $hostHeader) {
-    Remove-Item -Path:"IIS:\SslBindings\!443!$domain" -ErrorAction:Continue
-    Remove-WebBinding -Name:$siteName -HostHeader:$domain -Protocol:https -ErrorAction:Continue
+  foreach ($existingBinding in @($hostHeader | Foreach-Object { Get-IISSiteBinding -Name:$siteName -Protocol:https } | Where-Object { getHostHeader($_.BindingInformation) -eq $_ })) {
+    Remove-IISSiteBinding -Name:$siteName -BindingInformation:$existingBinding.BindingInformation -Protocol:https -ErrorAction:Continue;
   }
 
   <#
