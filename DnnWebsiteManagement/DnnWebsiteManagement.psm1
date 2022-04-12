@@ -450,10 +450,35 @@ function New-DNNSite {
     else {
       $oq = ''
     }
+
     $catalookSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}CAT_Settings"
     if (Test-Path $catalookSettingsTablePath) {
       Write-Information "Setting Catalook to test mode"
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'CAT_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$siteName
+    }
+
+    $esmSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Settings"
+    if (Test-Path $esmSettingsTablePath) {
+      Write-Information "Setting FattMerchant to test mode"
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET MerchantRegistrationStatusId = null, FattmerchantMerchantId = null, FattmerchantApiKey = '${env:FattmerchantTestApiKey}', FattmerchantPaymentsToken = '${env:FattmerchantTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$siteName
+    }
+
+    $esmParticipantTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Participant"
+    if (Test-Path $esmParticipantTablePath) {
+      Write-Information "Turn off payment processing for Engage: AMS"
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Participant' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PaymentProcessorCustomerId = NULL" -Database:$siteName
+    }
+
+    $liveCampaignSettingTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}LiveCampaign_Setting"
+    if (Test-Path $liveCampaignSettingTablePath) {
+      Write-Information "Turn off SMTP for Mandeeps Live Campaign"
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_Setting' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SMTPServerMode = 'DNNHostSettings', SendGridAPI = NULL WHERE SMTPServerMode = 'Sendgrid'" -Database:$siteName
+    }
+
+    $liveCampaignSmtpTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}LiveCampaign_SmtpServer"
+    if (Test-Path $liveCampaignSmtpTablePath) {
+      Write-Information "Turn off SMTP for Mandeeps Live Campaign"
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_SmtpServer' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET Server = 'localhost', Username = '', Password = ''" -Database:$siteName
     }
 
     if (Test-Path $www\$siteName\Website\DesktopModules\EngageSports) {
@@ -467,6 +492,12 @@ function New-DNNSite {
     Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$siteName
     Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$siteName
     Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$siteName
+
+    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$siteName
+    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$siteName
+    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$siteName
+    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$siteName
+    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$siteName
 
     Write-Information 'Clearing WebServers table'
     Invoke-Sqlcmd -Query:"TRUNCATE TABLE $(getDnnDatabaseObjectName -objectName:'WebServers' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier)" -Database:$siteName
@@ -641,11 +672,11 @@ function extractZip {
     }
   }
   else {
-    Write-Verbose 'Couldn''t find 7-Zip (try running ''choco install 7zip.commandline''), expanding with PSCX''s (slower) Expand-Archive cmdlet'
+    Write-Verbose 'Couldn''t find 7-Zip (try running ''choco install 7zip.commandline''), expanding with the (slower) Expand-Archive cmdlet'
     if (-not (Test-Path $output)) {
       mkdir $output | Out-Null
     }
-    Expand-Archive $zipFile -Output $output -ShowProgress
+    Expand-Archive $zipFile -DestinationPath $output
   }
 }
 
