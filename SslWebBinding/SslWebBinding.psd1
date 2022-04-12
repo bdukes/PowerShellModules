@@ -96,7 +96,7 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags                       = @( 'PSEdition_Desktop', 'Windows')
+            Tags                       = @( 'PSEdition_Core', 'PSEdition_Desktop', 'Windows')
 
             # A URL to the license for this module.
             LicenseUri                 = 'https://github.com/bdukes/PowerShellModules/blob/main/LICENSE'
@@ -110,7 +110,7 @@
             # ReleaseNotes of this module
             ReleaseNotes               = 'https://github.com/bdukes/PowerShellModules/blob/main/CHANGES.md'
 
-            ExternalModuleDependencies = @('WebAdministration', 'PKI')
+            ExternalModuleDependencies = @('PKI')
 
 
         } # End of PSData hashtable
