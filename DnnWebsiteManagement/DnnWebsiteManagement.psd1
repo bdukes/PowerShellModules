@@ -51,11 +51,11 @@
     # ProcessorArchitecture = ''
 
     # Modules that must be imported into the global environment prior to importing this module
-    RequiredModules   = @( @{ ModuleName = 'AdministratorRole'; ModuleVersion = '1.0.0' },
-        @{ ModuleName = 'Add-HostFileEntry'; ModuleVersion = '1.0.3' },
-        @{ ModuleName = 'SslWebBinding'; ModuleVersion = '1.1.0' },
-        @{ ModuleName = 'Write-HtmlNode'; ModuleVersion = '1.0.0' },
-        @{ ModuleName = 'ACL-Permissions'; ModuleVersion = '1.0.0' },
+    RequiredModules   = @( @{ ModuleName = 'AdministratorRole'; ModuleVersion = '1.0.1'; GUID = '694c2097-6b13-4735-8d6e-396224d646cc' },
+        @{ ModuleName = 'Add-HostFileEntry'; ModuleVersion = '1.1.0'; GUID = '16e30c8c-8de5-4090-a542-e8f9594ca613' },
+        @{ ModuleName = 'SslWebBinding'; ModuleVersion = '1.2.0'; GUID = 'd8b5b233-6f01-4ade-b771-147cc9101072' },
+        @{ ModuleName = 'Write-HtmlNode'; ModuleVersion = '2.0.1'; GUID = '941aad91-17a6-43a5-bb1c-cce8526d7b3e' },
+        @{ ModuleName = 'ACL-Permissions'; ModuleVersion = '1.1.0'; GUID = '908787a0-5a50-43c8-816a-7fa411b4e562' },
         @{ ModuleName = 'SqlServer'; ModuleVersion = '21.1.18256' },
         @{ ModuleName = 'IISAdministration'; ModuleVersion = '1.1.0.0' } )
 

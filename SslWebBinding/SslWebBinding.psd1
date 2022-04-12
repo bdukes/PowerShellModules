@@ -51,7 +51,7 @@
     # ProcessorArchitecture = ''
 
     # Modules that must be imported into the global environment prior to importing this module
-    RequiredModules   = @( @{ ModuleName = 'AdministratorRole'; ModuleVersion = '1.0.0' },
+    RequiredModules   = @( @{ ModuleName = 'AdministratorRole'; ModuleVersion = '1.0.1'; GUID = '694c2097-6b13-4735-8d6e-396224d646cc' },
         @{ ModuleName = 'IISAdministration'; ModuleVersion = '1.1.0.0' } )
 
     # Assemblies that must be loaded prior to importing this module
