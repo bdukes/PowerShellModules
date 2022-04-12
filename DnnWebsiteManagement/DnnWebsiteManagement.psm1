@@ -1,9 +1,9 @@
-#Requires -Version 3
+﻿#Requires -Version 3
 #Requires -Modules WebAdministration, Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
 
 $defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
-if ($null -eq $defaultDNNVersion) { $defaultDNNVersion = '9.2.2' }
+if ($null -eq $defaultDNNVersion) { $defaultDNNVersion = '9.10.2' }
 
 $defaultIncludeSource = $env:DnnWebsiteManagement_DefaultIncludeSource
 if ($defaultIncludeSource -eq 'false') { $defaultIncludeSource = $false }

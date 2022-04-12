@@ -3,6 +3,7 @@
 - April 2022
   - DnnWebsiteManagement 1.4.0
     - Add more protection scripts when restoring
+    - Update default DNN version to 9.10.2
     - Use SqlServer module instead of SQLPS
     - Use IisAdministration module instead of WebAdministration
   - ACL-Permissions 1.1.0
