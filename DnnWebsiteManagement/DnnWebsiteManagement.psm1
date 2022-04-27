@@ -452,7 +452,7 @@ function New-DNNSite {
         if ($null -eq $existingBinding) {
           Write-Verbose "Setting up IIS binding and HOSTS entry for $aliasHost"
           if ($PSCmdlet.ShouldProcess($aliasHost, 'Create IIS Site Binding')) {
-            New-IISSiteBinding -Name:$siteName -BindingInformation:"*:$($port):$aliasHost" -Protocol:http -Confirm:$false;
+            New-IISSiteBinding -Name:$siteName -BindingInformation:"*:$($port):$aliasHost" -Protocol:http;
           }
           if ($PSCmdlet.ShouldProcess($aliasHost, 'Add HOSTS file entry')) {
             Add-HostFileEntry $aliasHost -WhatIf:$WhatIfPreference -Confirm:$false;
@@ -474,17 +474,17 @@ function New-DNNSite {
     }
 
     $catalookSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}CAT_Settings"
-    if (Test-Path $catalookSettingsTablePath -and $PSCmdlet.ShouldProcess($siteName, 'Set Catalook to test mode')) {
+    if ((Test-Path $catalookSettingsTablePath) -and ($PSCmdlet.ShouldProcess($siteName, 'Set Catalook to test mode'))) {
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'CAT_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$siteName
     }
 
     $esmSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Settings"
-    if (Test-Path $esmSettingsTablePath -and $PSCmdlet.ShouldProcess($siteName, 'Set FattMerchant to test mode')) {
+    if ((Test-Path $esmSettingsTablePath) -and ($PSCmdlet.ShouldProcess($siteName, 'Set FattMerchant to test mode'))) {
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET MerchantRegistrationStatusId = null, FattmerchantMerchantId = null, FattmerchantApiKey = '${env:FattmerchantTestApiKey}', FattmerchantPaymentsToken = '${env:FattmerchantTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$siteName
     }
 
     $esmParticipantTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Participant"
-    if (Test-Path $esmParticipantTablePath -and $PSCmdlet.ShouldProcess($siteName, 'Turn off payment processing for Engage: AMS')) {
+    if ((Test-Path $esmParticipantTablePath) -and ($PSCmdlet.ShouldProcess($siteName, 'Turn off payment processing for Engage: AMS'))) {
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Participant' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PaymentProcessorCustomerId = NULL" -Database:$siteName
     }
 
@@ -500,7 +500,7 @@ function New-DNNSite {
       }
     }
 
-    if (Test-Path $www\$siteName\Website\DesktopModules\EngageSports -and $PSCmdlet.ShouldProcess($siteName, 'Update Engage: Sports wizard URLs')) {
+    if ((Test-Path $www\$siteName\Website\DesktopModules\EngageSports) -and ($PSCmdlet.ShouldProcess($siteName, 'Update Engage: Sports wizard URLs'))) {
       updateWizardUrls $siteName
     }
 
@@ -539,7 +539,7 @@ function New-DNNSite {
       watermarkLogos $siteName $siteNameExtension
     }
 
-    if (Test-Path "$www\$siteName\Website\ApplicationInsights.config" -and $PSCmdlet.ShouldProcess($siteName, 'Remove Application Insights config')) {
+    if ((Test-Path "$www\$siteName\Website\ApplicationInsights.config") -and ($PSCmdlet.ShouldProcess($siteName, 'Remove Application Insights config'))) {
       Remove-Item "$www\$siteName\Website\ApplicationInsights.config" -WhatIf:$WhatIfPreference -Confirm:$false;
     }
   }
@@ -566,7 +566,7 @@ function New-DNNSite {
     $webConfig.Save("$www\$siteName\Website\web.config")
   }
 
-  if (-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$siteName")") -and $PSCmdlet.ShouldProcess("IIS AppPool\$siteName", 'Create SQL Server login')) {
+  if ((-not (Test-Path "SQLSERVER:\SQL\(local)\DEFAULT\Logins\$(ConvertTo-EncodedSqlName "IIS AppPool\$siteName")")) -and ($PSCmdlet.ShouldProcess("IIS AppPool\$siteName", 'Create SQL Server login'))) {
     Invoke-Sqlcmd -Query:"CREATE LOGIN [IIS AppPool\$siteName] FROM WINDOWS WITH DEFAULT_DATABASE = [$siteName];" -Database:master
   }
 

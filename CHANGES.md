@@ -1,6 +1,8 @@
 # Change Log
 
 - April 2022
+  - DnnWebsiteManagement 1.4.1
+    - Fix errors introduced in 1.4.0 for `Restore-DNNSite`
   - DnnWebsiteManagement 1.4.0
     - Add more protection scripts when restoring
     - Update default DNN version to 9.10.2
