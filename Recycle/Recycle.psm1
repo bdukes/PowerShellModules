@@ -127,4 +127,87 @@ function recycleItem {
     }
 }
 
+#Credit for this approach: https://jdhitsolutions.com/blog/powershell/7024/managing-the-recycle-bin-with-powershell/
+function Restore-Item{
+    [CmdletBinding(DefaultParameterSetName = 'ManualSelection', SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
+    param(
+        [Parameter(Position = 0, Mandatory, ValueFromPipeline)]
+        [ValidateNotNullOrEmpty()]
+        [String]
+        $OriginalPath,
+
+        [Parameter(Position = 1)]
+        [Switch]
+        $Overwrite,
+
+        [Parameter(Position = 2, ParameterSetName = 'ManualSelection')]
+        [ValidateSet('Application', 'GetFolder', 'GetLink', 'IsBrowsable', 'IsFileSystem', 'IsFolder', 'IsLink', 'ModifyDate', 'Name', 'Parent', 'Path', 'Size', 'Type')]
+        [Alias('Criteria', 'Property')]
+        [String]
+        $SelectionCriteria = 'ModifyDate',
+
+        [Parameter(Position = 3, ParameterSetName = 'ManuelSelection')]
+        [Alias('Desc')]
+        [Switch]
+        $Descending,
+
+        [Parameter(Position = 2, ParameterSetName = 'Selector')]
+        [Alias('Selector', 'Script', 'Lambda', 'Filter')]
+        [ValidateNotNull()]
+        [ScriptBlock]
+        $SelectorScript
+    )
+
+    if((Test-Path $OriginalPath) -and -not $Overwrite){
+        if((Get-Item $OriginalPath) -is [System.IO.DirectoryInfo]){
+            Write-Error "Directory already exists and -Overwrite is not specified"
+        }
+        else{
+            Write-Error "File already exists and -Overwrite is not specified"
+        }
+    }
+    else{
+        $RecycleBinItems = @() + (New-Object -com shell.application).Namespace(10).Items()
+        $FoundItems = @()
+
+        foreach($Item in $RecycleBinItems){
+            if($Item.GetFolder.Title -eq $OriginalPath){
+                $FoundItems += $Item
+                Write-Verbose "Found $($Item.path)"
+            }
+        }
+        if($FoundItems.Length -eq 0){
+            Write-Error "No item in recycle bin with the specified path found"
+        }
+        else{
+            if($FoundItems.Length -gt 1){
+                if($PSCmdlet.ParameterSetName -eq 'Selector'){
+                    $SelectedItem = Invoke-Command $SelectorScript -ArgumentList $FoundItems
+                }
+                else{
+                    $SelectedItem = $FoundItems | Sort-Object $SelectionCriteria -Descending:$Descending | Select-Object -First 1
+                }
+            }
+            else{
+                $SelectedItem = $FoundItems[0]
+            }
+
+            if($SelectedItem){
+#            This does not seem to work, so I am doing it manually
+#            Maybe someone can get this to work (although I don't see an advantage over the current method)
+#            (New-Object -ComObject "Shell.Application").Namespace($BinItems[0].Path).Self().InvokeVerb("Restore")
+                if($Overwrite -or $PSBoundParameters['Force']){
+                    Remove-ItemSafely $SelectedItem.Path
+                }
+                Move-Item $SelectedItem.Path $OriginalPath
+            }
+            else{
+                Write-Error "No item with the specified criteria found"
+            }
+
+        }
+    }
+}
+
 Export-ModuleMember -Function Remove-ItemSafely
+Export-ModuleMember -Function Restore-Item
