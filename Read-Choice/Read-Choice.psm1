@@ -87,5 +87,31 @@ function Read-BooleanChoice {
 #>
 }
 
+function Read-ArrayInput{
+  param(
+    [Parameter(Position = 0, Mandatory)]
+    [String] $Item,
+
+    [Parameter(Position = 1)]
+    [ConsoleColor] $Color,
+
+    [Parameter(Position = 2)]
+    [Switch] $An
+  )
+  if($An){
+    $N = "n"
+  }
+  $Return = [System.Collections.ArrayList]@()
+  Write-Host "Enter a$N $Item, just press enter to exit: " -ForegroundColor $Color -NoNewline
+  $Input = Read-Host
+  while($Input -ne ""){
+    $Return.Add($Input) | Out-Null
+    Write-Host "Another one: " -ForegroundColor $Color -NoNewline
+    $Input = Read-Host
+  }
+  $Return
+}
+
+Export-ModuleMember Read-ArrayInput
 Export-ModuleMember Read-Choice
 Export-ModuleMember Read-BooleanChoice
