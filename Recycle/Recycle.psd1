@@ -12,7 +12,7 @@
     RootModule        = 'Recycle.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.3.1'
+    ModuleVersion     = '1.3.2'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -27,10 +27,10 @@
     CompanyName       = 'Engage Software'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2021 Engage Software'
+    Copyright         = '(c) 2022 Engage Software'
 
     # Description of the functionality provided by this module
-    Description       = 'Deletes the file or folder as if it had been done via File Explorer.'
+    Description       = 'Deletes the file or folder as if it had been done via File Explorer, or restores a deleted file from the recycle bin.'
 
     # Minimum version of the Windows PowerShell engine required by this module
     # PowerShellVersion = ''
