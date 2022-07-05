@@ -35,5 +35,23 @@ function Assert-AdministratorRole {
 #>
 }
 
+function Invoke-Elevated{
+  param(
+    [parameter(position = 0, mandatory)]
+    [ScriptBlock] $ScriptBlock
+  )
+
+  Start-Process Powershell -Verb runAs $ScriptBlock
+  <#
+.SYNOPSIS
+    Opens a new elevated powershell which runs the provided scriptblock
+.DESCRIPTION
+    Opens a new elevated powershell which runs the provided scriptblock
+.PARAMETER ScriptBlock
+    The ScriptBlock to run in the elvated shell
+#>
+}
+
 Export-ModuleMember Test-AdministratorRole
 Export-ModuleMember Assert-AdministratorRole
+Export-ModuleMember Invoke-Elevated
