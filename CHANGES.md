@@ -1,7 +1,7 @@
 # Change Log
 
 - July 2022
-  - Recycle 1.3.2
+  - Recycle 1.4.0
     - Added `Restore-Item`
 - April 2022
   - DnnWebsiteManagement 1.4.1

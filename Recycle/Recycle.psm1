@@ -128,7 +128,7 @@ function recycleItem {
 }
 
 #Credit for this approach: https://jdhitsolutions.com/blog/powershell/7024/managing-the-recycle-bin-with-powershell/
-function Restore-Item{
+function Restore-Item {
     [CmdletBinding(DefaultParameterSetName = 'ManualSelection', SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Position = 0, Mandatory, ValueFromPipeline)]
@@ -137,6 +137,7 @@ function Restore-Item{
         $OriginalPath,
 
         [Parameter(Position = 1)]
+        [Alias('Force')]
         [Switch]
         $Overwrite,
 
@@ -158,55 +159,72 @@ function Restore-Item{
         $SelectorScript
     )
 
-    if((Test-Path $OriginalPath) -and -not $Overwrite){
-        if((Get-Item $OriginalPath) -is [System.IO.DirectoryInfo]){
+    if ((Test-Path $OriginalPath) -and -not $Overwrite) {
+        if ((Get-Item $OriginalPath) -is [System.IO.DirectoryInfo]) {
             Write-Error "Directory already exists and -Overwrite is not specified"
         }
-        else{
+        else {
             Write-Error "File already exists and -Overwrite is not specified"
         }
     }
-    else{
+    else {
         $RecycleBinItems = @() + (New-Object -com shell.application).Namespace(10).Items()
         $FoundItems = @()
 
-        foreach($Item in $RecycleBinItems){
-            if($Item.GetFolder.Title -eq $OriginalPath){
+        foreach ($Item in $RecycleBinItems) {
+            if ($Item.GetFolder.Title -eq $OriginalPath) {
                 $FoundItems += $Item
                 Write-Verbose "Found $($Item.path)"
             }
         }
-        if($FoundItems.Length -eq 0){
+        if ($FoundItems.Length -eq 0) {
             Write-Error "No item in recycle bin with the specified path found"
         }
-        else{
-            if($FoundItems.Length -gt 1){
-                if($PSCmdlet.ParameterSetName -eq 'Selector'){
+        else {
+            if ($FoundItems.Length -gt 1) {
+                if ($PSCmdlet.ParameterSetName -eq 'Selector') {
                     $SelectedItem = Invoke-Command $SelectorScript -ArgumentList $FoundItems
                 }
-                else{
+                else {
                     $SelectedItem = $FoundItems | Sort-Object $SelectionCriteria -Descending:$Descending | Select-Object -First 1
                 }
             }
-            else{
+            else {
                 $SelectedItem = $FoundItems[0]
             }
 
-            if($SelectedItem){
-#            This does not seem to work, so I am doing it manually
-#            Maybe someone can get this to work (although I don't see an advantage over the current method)
-#            (New-Object -ComObject "Shell.Application").Namespace($BinItems[0].Path).Self().InvokeVerb("Restore")
-                if($Overwrite -or $PSBoundParameters['Force']){
+            if ($SelectedItem) {
+                #            This does not seem to work, so I am doing it manually
+                #            Maybe someone can get this to work (although I don't see an advantage over the current method)
+                #            (New-Object -ComObject "Shell.Application").Namespace($BinItems[0].Path).Self().InvokeVerb("Restore")
+                if ($Overwrite -or $PSBoundParameters['Force']) {
                     Remove-ItemSafely $SelectedItem.Path
                 }
                 Move-Item $SelectedItem.Path $OriginalPath
             }
-            else{
+            else {
                 Write-Error "No item with the specified criteria found"
             }
 
         }
     }
+
+    <#
+.SYNOPSIS
+    Restores a file from the Recycle Bin.
+.DESCRIPTION
+    Finds the item(s) in the Recycle Bin with the given path, selects one based on the given selector (default is newest), and restores it to the original location.
+.PARAMETER OriginalPath
+    The original path to the file to restore.
+.PARAMETER Overwrite
+    Whether to overwrite the file at the path if it exists.
+.PARAMETER SelectionCriteria
+    How to sort the items to find which to restore.
+.PARAMETER Descending
+    Whether the SelectionCriteria sort should be descending or ascending.
+.PARAMETER SelectorScript
+    A script block which determines which item to restore.
+#>
 }
 
 Export-ModuleMember -Function Remove-ItemSafely
