@@ -2,7 +2,11 @@
 
 - July 2022
   - Recycle 1.3.2
-    - Added `Restore-Item`
+    - Added `Restore-Item` and `Get-RecycledItems`
+  - Read-Choice 1.0.3
+    - Added `Read-ArrayInput`
+  - AdministratorRole 1.0.2
+    - Added `Invoke-Elevated`
 - April 2022
   - DnnWebsiteManagement 1.4.1
     - Fix errors introduced in 1.4.0 for `Restore-DNNSite`
