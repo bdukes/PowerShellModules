@@ -88,6 +88,49 @@ function Read-BooleanChoice {
 }
 
 function Read-ArrayInput{
+  <#
+    .SYNOPSIS
+
+    Reads multiple inputs from the user and returns them as array
+
+    .DESCRIPTION
+
+    Reads multiple inputs from the user and returns them as array
+
+    .PARAMETER Item
+    The name of what you want the user to input
+
+    .PARAMETER Color
+    Optional parameter, the prompt will be in this color
+
+    .PARAMETER An
+    If your item starts with a vowel or a silent consonant
+
+    .INPUTS
+
+    This function does not take any pipeline input
+
+    .OUTPUTS
+
+    An array with the users inputs
+
+    .EXAMPLE
+
+    PS> Read-ArrayInput "Path"
+    PS> Enter a Path, just press enter to exit:
+    PS> Another one:
+
+    .EXAMPLE
+
+    PS> Read-ArrayInput "Address" -An
+    PS> Enter an Address, just press enter to exit:
+    PS> Another one or enter to exit:
+
+    .NOTES
+    Name: Read-ArrayInput
+    Author: Kevin Holtkamp, kevinholtkamp26@gmail.com
+    LastEdit: 09.07.2022
+  #>
   param(
     [Parameter(Position = 0, Mandatory)]
     [String] $Item,
@@ -106,7 +149,7 @@ function Read-ArrayInput{
   $Input = Read-Host
   while($Input -ne ""){
     $Return.Add($Input) | Out-Null
-    Write-Host "Another one: " -ForegroundColor $Color -NoNewline
+    Write-Host "Another one or enter to exit: " -ForegroundColor $Color -NoNewline
     $Input = Read-Host
   }
   $Return
