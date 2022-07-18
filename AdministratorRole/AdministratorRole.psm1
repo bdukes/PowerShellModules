@@ -35,7 +35,7 @@ function Assert-AdministratorRole {
 #>
 }
 
-function Invoke-Elevated{
+function Invoke-Elevated {
   param(
     [parameter(position = 0, mandatory)]
     [ScriptBlock] $ScriptBlock
@@ -44,11 +44,11 @@ function Invoke-Elevated{
   Start-Process Powershell -Verb runAs $ScriptBlock
   <#
 .SYNOPSIS
-    Opens a new elevated powershell which runs the provided scriptblock
+    Invokes the provided scriptblock as an administrator.
 .DESCRIPTION
-    Opens a new elevated powershell which runs the provided scriptblock
+    Opens a new elevated powershell which runs the provided scriptblock.
 .PARAMETER ScriptBlock
-    The ScriptBlock to run in the elvated shell
+    The ScriptBlock to run in the elevated shell.
 #>
 }
 

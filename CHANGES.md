@@ -3,6 +3,8 @@
 - July 2022
   - Recycle 1.4.0
     - Added `Restore-Item`
+  - AdministratorRole 1.1.0
+    - Added `Invoke-Elevated`
 - April 2022
   - DnnWebsiteManagement 1.4.1
     - Fix errors introduced in 1.4.0 for `Restore-DNNSite`
