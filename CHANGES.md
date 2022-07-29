@@ -1,8 +1,8 @@
 # Change Log
 
 - July 2022
-  - Recycle 1.4.0
-    - Added `Restore-Item` and `Get-RecycledItem`
+  - Recycle 1.5.0
+    - Added `Restore-RecycledItem` and `Get-RecycledItem`
   - AdministratorRole 1.1.0
     - Added `Invoke-Elevated`
 - April 2022
