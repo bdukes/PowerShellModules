@@ -1,4 +1,4 @@
-﻿#Requires -Version 3
+#Requires -Version 3
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
 
@@ -77,7 +77,7 @@ function Remove-DNNSite {
 
   #TODO: remove certificate
   if ($PSCmdlet.ShouldProcess($siteName, 'Remove HTTPS Binding')) {
-    Remove-SslWebBinding $siteName;
+    Remove-SslWebBinding $siteName -Confirm:$false;
   }
 
   $website = Get-IISSite $siteName;
@@ -86,7 +86,7 @@ function Remove-DNNSite {
       if ($binding.sslFlags -eq 1) {
         $hostHeader = $binding.bindingInformation.Substring(6) #remove "*:443:" from the beginning of the binding info
         if ($PSCmdlet.ShouldProcess($hostHeader, 'Remove HTTPS Binding')) {
-          Remove-SslWebBinding $siteName $hostHeader;
+          Remove-SslWebBinding $siteName $hostHeader -Confirm:$false;
         }
       }
     }

@@ -1,5 +1,11 @@
 # Change Log
 
+- August 2022
+  - SslWebBinding 1.3.0
+    - `New-SslWebBinding` will use `mkcert` to generate the certificate if installed
+    - `Remove-SslWebBinding` correctly suppresses confirm prompt
+  - DnnWebsiteManagement 1.4.2
+    - Use SslWebBinding 1.3.0
 - July 2022
   - Recycle 1.5.0
     - Added `Restore-RecycledItem` and `Get-RecycledItem`
