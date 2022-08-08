@@ -6,6 +6,8 @@
     - `Remove-SslWebBinding` correctly suppresses confirm prompt
   - DnnWebsiteManagement 1.4.2
     - Use SslWebBinding 1.3.0
+  - DnnWebsiteManagement 1.4.3
+    - Fix error when site zip has a single folder
 - July 2022
   - Recycle 1.5.0
     - Added `Restore-RecycledItem` and `Get-RecycledItem`

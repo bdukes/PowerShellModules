@@ -1,4 +1,4 @@
-#Requires -Version 3
+﻿#Requires -Version 3
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
 
@@ -740,7 +740,7 @@ function extractPackages {
       $siteZip = $siteZipOutput
       $unzippedFiles = @(Get-ChildItem $siteZipOutput -Directory)
       if ($unzippedFiles.Length -eq 1) {
-        $siteZip += "\$unzippedFiles"
+        $siteZip += "\$($unzippedFiles.Name)"
       }
     }
 
