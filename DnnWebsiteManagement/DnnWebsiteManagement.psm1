@@ -478,9 +478,14 @@ function New-DNNSite {
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'CAT_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$siteName
     }
 
-    $esmSettingsTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Settings"
-    if ((Test-Path $esmSettingsTablePath) -and ($PSCmdlet.ShouldProcess($siteName, 'Set FattMerchant to test mode'))) {
+    $esmSettingsFattmerchantPath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Settings\Columns\FattmerchantMerchantId"
+    if ((Test-Path $esmSettingsFattmerchantPath) -and ($PSCmdlet.ShouldProcess($siteName, 'Set FattMerchant to test mode'))) {
       Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET MerchantRegistrationStatusId = null, FattmerchantMerchantId = null, FattmerchantApiKey = '${env:FattmerchantTestApiKey}', FattmerchantPaymentsToken = '${env:FattmerchantTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$siteName
+    }
+
+    $esmSettingsStaxPath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Settings\Columns\StaxMerchantId"
+    if ((Test-Path $esmSettingsStaxPath) -and ($PSCmdlet.ShouldProcess($siteName, 'Set Stax to test mode'))) {
+      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -databaseOwner:$databaseOwner -objectQualifier:$objectQualifier) SET MerchantRegistrationStatusId = null, StaxMerchantId = null, StaxApiKey = '${env:StaxTestApiKey}', StaxPaymentsToken = '${env:StaxTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$siteName
     }
 
     $esmParticipantTablePath = "SQLSERVER:\SQL\(local)\DEFAULT\Databases\$(ConvertTo-EncodedSqlName $siteName)\Tables\$databaseOwner.${oq}esm_Participant"
