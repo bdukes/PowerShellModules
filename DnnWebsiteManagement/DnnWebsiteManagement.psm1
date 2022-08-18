@@ -698,7 +698,7 @@ function extractZip {
   if ($commandName) {
     try {
       $outputFile = [System.IO.Path]::GetTempFileName()
-      $process = Start-Process $commandName -ArgumentList "x -y -o`"$output`" -- `"$zipFile`"" -Wait -NoNewWindow -PassThru -RedirectStandardOutput $outputFile
+      $process = Start-Process $commandName -ArgumentList "x -y -o`"$output`" -- `"$zipFile`"" -Wait -NoNewWindow -PassThru -RedirectStandardOutput $outputFile -WhatIf:$WhatIfPreference -Confirm:$false;
       if ($process.ExitCode -ne 0) {
         if ($process.ExitCode -eq 1) {
           Write-Warning "Non-fatal error extracting $zipFile, opening 7-Zip output"
@@ -714,7 +714,7 @@ function extractZip {
       }
     }
     finally {
-      Remove-Item $outputFile
+      Remove-Item $outputFile -WhatIf:$false -Confirm:$false;
     }
   }
   else {
