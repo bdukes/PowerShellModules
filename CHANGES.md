@@ -10,6 +10,8 @@
     - Fix error when site zip has a single folder
   - DnnWebsiteManagement 1.4.4
     - Fix error when restoring newer Engage: AMS site
+  - DnnWebsiteManagement 1.4.5
+    - Remove extra confirmation prompts
 - July 2022
   - Recycle 1.5.0
     - Added `Restore-RecycledItem` and `Get-RecycledItem`
