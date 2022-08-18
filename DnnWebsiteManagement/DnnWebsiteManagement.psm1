@@ -92,7 +92,7 @@ function Remove-DNNSite {
     }
 
     if ($PSCmdlet.ShouldProcess($siteName, 'Remove IIS Site')) {
-      Remove-IISSite $siteName;
+      Remove-IISSite $siteName -WhatIf:$WhatIfPreference -Confirm:$false;
     }
   }
 
@@ -111,7 +111,7 @@ function Remove-DNNSite {
   }
 
   if (Test-Path $www\$siteName) {
-    if ($PSCmdlet.ShouldProcess($siteName, "Remove $www\$siteName")) {
+    if ($PSCmdlet.ShouldProcess("$www\$siteName", "Remove website folder")) {
       Remove-Item $www\$siteName -Recurse -Force -WhatIf:$WhatIfPreference -Confirm:$false;
     }
   }
@@ -384,10 +384,12 @@ function New-DNNSite {
   $domains = New-Object System.Collections.Generic.List[System.String]
   $domains.Add($siteName)
 
-  Write-Information "Setting modify permission on website files for IIS AppPool\$siteName"
-  Set-ModifyPermission $www\$siteName\Website $siteName -WhatIf:$WhatIfPreference -Confirm:$ConfirmPreference;
+  if ($PSCmdlet.ShouldProcess("$www\$siteName\Website", 'Set Modify File Permissions')) {
+    Set-ModifyPermission $www\$siteName\Website $siteName -WhatIf:$WhatIfPreference -Confirm:$false;
+  }
 
-  [xml]$webConfig = Get-Content $www\$siteName\Website\web.config
+  $webConfigPath = "$www\$siteName\Website\web.config";
+  [xml]$webConfig = Get-Content $webConfigPath
   if ($databaseBackup -eq '') {
     if ($PSCmdlet.ShouldProcess($siteName, 'Create Database')) {
       newDnnDatabase $siteName
@@ -549,24 +551,24 @@ function New-DNNSite {
     }
   }
 
-  if ($PSCmdlet.ShouldProcess($siteName, 'Set connectionString in web.config')) {
+  if ($PSCmdlet.ShouldProcess($webConfigPath, 'Set connectionString in web.config')) {
     $connectionString = "Data Source=.`;Initial Catalog=$siteName`;Integrated Security=true"
     $webConfig.configuration.connectionStrings.add | Where-Object { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $connectionString }
     $webConfig.configuration.appSettings.add | Where-Object { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }
     $webConfig.Save("$www\$siteName\Website\web.config")
   }
 
-  if ($PSCmdlet.ShouldProcess($siteName, 'Set objectQualifier and databaseOwner in web.config')) {
+  if ($PSCmdlet.ShouldProcess($webConfigPath, 'Set objectQualifier and databaseOwner in web.config')) {
     $webConfig.configuration.dotnetnuke.data.providers.add | Where-Object { $_.name -eq 'SqlDataProvider' } | ForEach-Object { $_.objectQualifier = $objectQualifier; $_.databaseOwner = $databaseOwner }
     $webConfig.Save("$www\$siteName\Website\web.config")
   }
 
-  if ($PSCmdlet.ShouldProcess($siteName, 'Update web.config to allow short passwords')) {
+  if ($PSCmdlet.ShouldProcess($webConfigPath, 'Update web.config to allow short passwords')) {
     $webConfig.configuration['system.web'].membership.providers.add | Where-Object { $_.type -eq 'System.Web.Security.SqlMembershipProvider' } | ForEach-Object { $_.minRequiredPasswordLength = '4' }
     $webConfig.Save("$www\$siteName\Website\web.config")
   }
 
-  if ($PSCmdlet.ShouldProcess($siteName, 'Turn on debug mode in web.config')) {
+  if ($PSCmdlet.ShouldProcess($webConfigPath, 'Turn on debug mode in web.config')) {
     $webConfig.configuration['system.web'].compilation.debug = 'true'
     $webConfig.Save("$www\$siteName\Website\web.config")
   }
