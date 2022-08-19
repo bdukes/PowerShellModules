@@ -1,4 +1,4 @@
-﻿#Requires -Version 3
+#Requires -Version 3
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
 
@@ -268,8 +268,10 @@ function Restore-DNNSite {
     [parameter(Mandatory = $true, position = 0)]
     [string]$siteName,
     [parameter(Mandatory = $true, position = 1)]
+    [ValidateScript({ Test-Path -Path:$_ }, ErrorMessage = "SiteZipPath file or directory not found")]
     [string]$siteZip,
     [parameter(Mandatory = $true, position = 2)]
+    [ValidateScript({ Test-Path -Path:$_ -PathType:Leaf }, ErrorMessage = "DatabaseBackupPath file not found")]
     [string]$databaseBackup,
     [parameter(Mandatory = $false)]
     [string]$sourceVersion = '',
@@ -318,8 +320,12 @@ function Upgrade-DNNSite {
     [DnnProduct]$product = [DnnProduct]::DnnPlatform,
     [switch]$includeSource = $defaultIncludeSource
   );
-
-  extractPackages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -UseUpgradePackage
+  try {
+    extractPackages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -UseUpgradePackage -ErrorAction Stop;
+  }
+  catch {
+    $PSCmdlet.ThrowTerminatingError($_);
+  }
 
   Write-Information "Launching https://$siteName/Install/Install.aspx?mode=upgrade"
   Start-Process -FilePath:https://$siteName/Install/Install.aspx?mode=upgrade
@@ -363,7 +369,12 @@ function New-DNNSite {
   if ($siteNameExtension -eq '') { $siteNameExtension = '.local' }
 
   if ($PSCmdlet.ShouldProcess($siteName, 'Extract Package')) {
-    extractPackages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -SiteZip:$siteZip
+    try {
+      extractPackages -SiteName:$siteName -Version:$version -Product:$product -IncludeSource:$includeSource -SiteZip:$siteZip -ErrorAction Stop;
+    }
+    catch {
+      $PSCmdlet.ThrowTerminatingError($_);
+    }
   }
 
   if ($PSCmdlet.ShouldProcess($siteName, 'Add HOSTS file entry')) {
@@ -392,13 +403,13 @@ function New-DNNSite {
   [xml]$webConfig = Get-Content $webConfigPath
   if ($databaseBackup -eq '') {
     if ($PSCmdlet.ShouldProcess($siteName, 'Create Database')) {
-      newDnnDatabase $siteName
+      newDnnDatabase $siteName -ErrorAction Stop;
     }
     # TODO: create schema if $databaseOwner has been passed in
   }
   else {
     if ($PSCmdlet.ShouldProcess($databaseBackup, 'Restore Database')) {
-      restoreDnnDatabase $siteName (Get-Item $databaseBackup).FullName
+      restoreDnnDatabase $siteName (Get-Item $databaseBackup).FullName -ErrorAction Stop;
       Invoke-Sqlcmd -Query:"ALTER DATABASE [$siteName] SET RECOVERY SIMPLE"
     }
 
@@ -700,16 +711,26 @@ function extractZip {
       $outputFile = [System.IO.Path]::GetTempFileName()
       $process = Start-Process $commandName -ArgumentList "x -y -o`"$output`" -- `"$zipFile`"" -Wait -NoNewWindow -PassThru -RedirectStandardOutput $outputFile -WhatIf:$WhatIfPreference -Confirm:$false;
       if ($process.ExitCode -ne 0) {
-        if ($process.ExitCode -eq 1) {
-          Write-Warning "Non-fatal error extracting $zipFile, opening 7-Zip output"
-        }
-        else {
-          Write-Warning "Error extracting $zipFile, opening 7-Zip output"
-        }
-
         $zipLogOutput = Get-Content $outputFile;
         if ($zipLogOutput) {
           Write-Warning $zipLogOutput
+        }
+
+        if ($process.ExitCode -eq 1) {
+          if ($zipLogOutput) {
+            Write-Warning "Non-fatal error extracting $zipFile, see above 7-Zip output"
+          }
+          else {
+            Write-Warning "Non-fatal error extracting $zipFile"
+          }
+        }
+        else {
+          if ($zipLogOutput) {
+            Write-Error "Error extracting $zipFile, see above 7-Zip output"
+          }
+          else {
+            Write-Error "Error extracting $zipFile"
+          }
         }
       }
     }
