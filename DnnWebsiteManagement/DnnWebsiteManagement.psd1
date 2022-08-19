@@ -75,7 +75,7 @@
     # NestedModules = @()
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = @('Install-DNNResources', 'Remove-DNNSite', 'Rename-DNNSite', 'New-DNNSite', 'Upgrade-DNNSite', 'Restore-DNNSite')
+    FunctionsToExport = @('Install-DNNResource', 'Remove-DNNSite', 'Rename-DNNSite', 'New-DNNSite', 'Update-DNNSite', 'Restore-DNNSite')
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     CmdletsToExport   = @()
