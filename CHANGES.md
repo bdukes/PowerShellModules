@@ -12,6 +12,18 @@
     - Fix error when restoring newer Engage: AMS site
   - DnnWebsiteManagement 1.4.5
     - Remove extra confirmation prompts
+  - DnnWebsiteManagement 1.5.0
+    - Fail fast when unable to continue
+    - Use standardized names (with aliases for backwards compatibility)
+      - Rename `Upgrade-DNNSite` to `Update-DNNSite`
+      - Rename `Install-DNNResources` to `Install-DNNResource`
+      - Capitalize all parameters
+      - Rename `siteName` to `Name`
+      - Rename `siteZip` to `SiteZipPath`
+      - Rename `oldDomain` to `Domain`
+      - etc.
+    - Implement ShouldProcess (i.e. `-WhatIf` and `-Confirm`) for `Rename-DNNSite` and `Update-DNNSite`
+    - Support restoring when site zip includes development files (i.e. if the website folder is a level deeper but the top-level files should be kept)
 - July 2022
   - Recycle 1.5.0
     - Added `Restore-RecycledItem` and `Get-RecycledItem`

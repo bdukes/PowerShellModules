@@ -830,6 +830,7 @@ function extractPackages {
   );
 
   $SiteZipOutputPath = $null;
+  $CopyEntireDirectory = $false;
   if ($SiteZipPath -ne '') {
     if (Test-Path $SiteZipPath -PathType Leaf) {
       $SiteZipOutputPath = "$www\$Name\Extracted_Website"
@@ -837,11 +838,26 @@ function extractPackages {
       $SiteZipPath = $SiteZipOutputPath
       $unzippedFiles = @(Get-ChildItem $SiteZipOutputPath -Directory)
       if ($unzippedFiles.Length -eq 1) {
+        Write-Verbose "Found a single folder in the zip, assuming it's the entire website"
         $SiteZipPath += "\$($unzippedFiles.Name)"
       }
     }
 
-    $assemblyPath = "$SiteZipPath\bin\DotNetNuke.dll"
+    $assemblyPath = Join-Path -Path:$SiteZipPath -ChildPath:"bin" -AdditionalChildPath:@("DotNetNuke.dll");
+    if (-not (Test-Path $assemblyPath)) {
+      $assemblyPath = Join-Path -Path:$SiteZipPath -ChildPath:"Website" -AdditionalChildPath:@("bin", "DotNetNuke.dll");
+      if (Test-Path $assemblyPath) {
+        $CopyEntireDirectory = Test-Path "$SiteZipPath\.gitignore";
+        if (-not $CopyEntireDirectory) {
+          $SiteZipPath = Join-Path $SiteZipPath "Website"
+          Write-Verbose "Found a Website folder, adjusting path"
+        }
+        else {
+          Write-Verbose "Found a .gitignore file, assuming this is a development site"
+        }
+      }
+    }
+
     $Version = [Reflection.AssemblyName]::GetAssemblyName($assemblyPath).Version
     Write-Verbose "Found version $Version of DotNetNuke.dll"
   }
@@ -919,7 +935,12 @@ function extractPackages {
     $SiteZipPath = $SiteZipOutputPath
   }
 
-  $to = "$www\$Name\Website"
+  if ($CopyEntireDirectory) {
+    $to = "$www\$Name"
+  }
+  else {
+    $to = "$www\$Name\Website"
+  }
   $from = "$SiteZipPath/"
 
   # add * only if the directory already exists, based on https://groups.google.com/d/msg/microsoft.public.windows.powershell/iTEakZQQvh0/TLvql_87yzgJ
