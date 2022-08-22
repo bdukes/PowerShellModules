@@ -1,4 +1,4 @@
-#Requires -Version 3
+﻿#Requires -Version 3
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
 
@@ -314,7 +314,12 @@ function Rename-DNNSite {
   $appPool.Start();
 
   if ($PSCmdlet.ShouldProcess("https://$NewName", "Open browser")) {
-    Start-Process -FilePath:https://$NewName -WhatIf:$WhatIfPreference -Confirm:$false
+    if (Get-Command -Name:Start-Process -ParameterName:WhatIf -ErrorAction SilentlyContinue) {
+      Start-Process -FilePath:https://$NewName -WhatIf:$WhatIfPreference -Confirm:$false;
+    }
+    else {
+      Start-Process -FilePath:https://$NewName;
+    }
   }
 
   <#
@@ -410,7 +415,12 @@ function Update-DNNSite {
   }
 
   if ($PSCmdlet.ShouldProcess("https://$Name/Install/Install.aspx?mode=upgrade", "Open browser")) {
-    Start-Process -FilePath:https://$Name/Install/Install.aspx?mode=upgrade -WhatIf:$WhatIfPreference -Confirm:$false
+    if (Get-Command -Name:Start-Process -ParameterName:WhatIf -ErrorAction SilentlyContinue) {
+      Start-Process -FilePath:https://$Name/Install/Install.aspx?mode=upgrade -WhatIf:$WhatIfPreference -Confirm:$false;
+    }
+    else {
+      Start-Process -FilePath:https://$Name/Install/Install.aspx?mode=upgrade;
+    }
   }
 
   <#
@@ -712,7 +722,12 @@ function New-DNNSite {
   }
 
   if ($PSCmdlet.ShouldProcess("https://$Name", 'Open browser')) {
-    Start-Process -FilePath:https://$Name -WhatIf:$WhatIfPreference -Confirm:$false
+    if (Get-Command -Name:Start-Process -ParameterName:WhatIf -ErrorAction SilentlyContinue) {
+      Start-Process -FilePath:https://$Name -WhatIf:$WhatIfPreference -Confirm:$false
+    }
+    else {
+      Start-Process -FilePath:https://$Name;
+    }
   }
 
   <#
@@ -823,7 +838,13 @@ function extractZip {
   if ($commandName) {
     try {
       $outputFile = [System.IO.Path]::GetTempFileName()
-      $process = Start-Process $commandName -ArgumentList "x -y -o`"$output`" -- `"$zipFile`"" -Wait -NoNewWindow -PassThru -RedirectStandardOutput $outputFile -WhatIf:$WhatIfPreference -Confirm:$false;
+      if (Get-Command -Name:Start-Process -ParameterName:WhatIf -ErrorAction SilentlyContinue) {
+        $process = Start-Process $commandName -ArgumentList "x -y -o`"$output`" -- `"$zipFile`"" -Wait -NoNewWindow -PassThru -RedirectStandardOutput $outputFile -WhatIf:$WhatIfPreference -Confirm:$false;
+      }
+      else {
+        $process = Start-Process $commandName -ArgumentList "x -y -o`"$output`" -- `"$zipFile`"" -Wait -NoNewWindow -PassThru -RedirectStandardOutput $outputFile;
+      }
+
       if ($process.ExitCode -ne 0) {
         $zipLogOutput = Get-Content $outputFile;
         if ($zipLogOutput) {
