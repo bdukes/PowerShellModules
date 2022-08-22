@@ -1018,11 +1018,24 @@ function extractPackages {
   else {
     $to = Join-Path $sitePath "Website"
   }
-  $from = "$SiteZipPath/"
+  $from = $SiteZipPath
 
-  # add * only if the directory already exists, based on https://groups.google.com/d/msg/microsoft.public.windows.powershell/iTEakZQQvh0/TLvql_87yzgJ
-  if (Test-Path $to -PathType Container) { $from += '*' }
-  Copy-Item $from $to -Force -Recurse
+  $filesToCopy = Get-ChildItem $from -Recurse -File;
+  $totalCount = $filesToCopy.Count;
+  $progressCount = 0;
+  Write-Progress -Activity:"Copying files to $to" -Status 'Copying…' -PercentComplete 0;
+  foreach ($file in $filesToCopy) {
+    $progressCount += 1;
+    $destination = $file.FullName -replace [regex]::escape($from), $to;
+    Write-Progress -Activity:"Copying files to $to" -Status 'Copying…' -PercentComplete ($progressCount / $totalCount * 100) -CurrentOperation:$destination;
+    $directory = Split-Path $destination;
+    $baseDirectory = Split-Path $directory;
+    $directoryName = Split-Path $directory -Leaf;
+    New-Item -Path:$baseDirectory -Name:$directoryName -ItemType:Directory -Force | Out-Null;
+    Copy-Item $file.FullName $destination;
+  }
+
+  Write-Progress -Activity:"Copying files to $to" -PercentComplete 100 -Completed;
 
   if ($SiteZipOutputPath) {
     Remove-Item $SiteZipOutputPath -Force -Recurse
@@ -1071,22 +1084,16 @@ function restoreDnnDatabase {
     Write-Warning 'Unable to find SQL Server info in registry, backup file will not have ACL permissions set'
   }
 
+  $dbRestoreFile = New-Object Microsoft.SqlServer.Management.Smo.RelocateFile;
+  $dbRestoreLog = New-Object Microsoft.SqlServer.Management.Smo.RelocateFile;
+
+  $logicalDataFileName = $Name;
+  $logicalLogFileName = $Name;
+
   #based on http://redmondmag.com/articles/2009/12/21/automated-restores.aspx
-  $server = New-Object Microsoft.SqlServer.Management.Smo.Server('(local)')
-  $dbRestore = New-Object Microsoft.SqlServer.Management.Smo.Restore
-
-  $dbRestore.Action = 'Database'
-  $dbRestore.NoRecovery = $false
-  $dbRestore.ReplaceDatabase = $true
+  $server = New-Object Microsoft.SqlServer.Management.Smo.Server('(local)');
+  $dbRestore = New-Object Microsoft.SqlServer.Management.Smo.Restore;
   $dbRestore.Devices.AddDevice($DatabaseBackupPath, [Microsoft.SqlServer.Management.Smo.DeviceType]::File)
-  $dbRestore.Database = $Name
-
-  $dbRestoreFile = New-Object Microsoft.SqlServer.Management.Smo.RelocateFile
-  $dbRestoreLog = New-Object Microsoft.SqlServer.Management.Smo.RelocateFile
-
-  $logicalDataFileName = $Name
-  $logicalLogFileName = $Name
-
   foreach ($file in $dbRestore.ReadFileList($server)) {
     switch ($file.Type) {
       'D' { $logicalDataFileName = $file.LogicalName }
@@ -1094,20 +1101,12 @@ function restoreDnnDatabase {
     }
   }
 
-  $dbRestoreFile.LogicalFileName = $logicalDataFileName
-  $dbRestoreFile.PhysicalFileName = Join-Path $server.Information.MasterDBPath ($Name + '_Data.mdf')
-  $dbRestoreLog.LogicalFileName = $logicalLogFileName
-  $dbRestoreLog.PhysicalFileName = Join-Path $server.Information.MasterDBLogPath ($Name + '_Log.ldf')
+  $dbRestoreFile.LogicalFileName = $logicalDataFileName;
+  $dbRestoreFile.PhysicalFileName = Join-Path $server.Information.MasterDBPath ($Name + '_Data.mdf');
+  $dbRestoreLog.LogicalFileName = $logicalLogFileName;
+  $dbRestoreLog.PhysicalFileName = Join-Path $server.Information.MasterDBLogPath ($Name + '_Log.ldf');
 
-  $dbRestore.RelocateFiles.Add($dbRestoreFile) | Out-Null
-  $dbRestore.RelocateFiles.Add($dbRestoreLog) | Out-Null
-
-  try {
-    $dbRestore.SqlRestore($server)
-  }
-  catch {
-    Write-Output $_.Exception
-  }
+  Restore-SqlDatabase -ReplaceDatabase -Database:$Name -RelocateFile:@($dbRestoreFile, $dbRestoreLog) -BackupFile:$DatabaseBackupPath -ServerInstance:'(local)';
 }
 
 function getDnnDatabaseObjectName {
