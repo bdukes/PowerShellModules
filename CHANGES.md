@@ -25,6 +25,8 @@
     - Implement ShouldProcess (i.e. `-WhatIf` and `-Confirm`) for `Rename-DNNSite` and `Update-DNNSite`
     - Support restoring when site zip includes development files (i.e. if the website folder is a level deeper but the top-level files should be kept)
     - Show progress when copying files and restoring database
+  - DnnWebsiteManagement 1.5.1
+    - Fix error when no database backup is passed
 - July 2022
   - Recycle 1.5.0
     - Added `Restore-RecycledItem` and `Get-RecycledItem`
