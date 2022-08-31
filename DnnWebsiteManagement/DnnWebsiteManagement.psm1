@@ -704,6 +704,9 @@ function New-DNNSite {
   }
 
   $loginName = "IIS AppPool\$Name";
+  $sqlPath = Join-Path 'SQLSERVER:' 'SQL';
+  $localhostSqlPath = Join-Path $sqlPath '(local)';
+  $localSqlPath = Join-Path $localhostSqlPath 'DEFAULT';
   $loginsPath = Join-Path $localSqlPath 'Logins';
   $loginPath = Join-Path $loginsPath (ConvertTo-EncodedSqlName $loginName);
   if ((-not (Test-Path $loginPath)) -and ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server login'))) {
