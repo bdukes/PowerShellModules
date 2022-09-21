@@ -1,4 +1,4 @@
-﻿#Requires -Version 3
+#Requires -Version 3
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
 
@@ -359,7 +359,10 @@ function Restore-DNNSite {
     [string]$Domain = '',
 
     [parameter(Mandatory = $false)]
-    [switch]$IncludeSource = $defaultIncludeSource
+    [switch]$IncludeSource = $defaultIncludeSource,
+
+    [parameter(Mandatory = $false)]
+    [string]$GitRepository = ''
   );
 
   $siteZipFile = Get-Item $SiteZipPath
@@ -369,7 +372,7 @@ function Restore-DNNSite {
   }
 
   $IncludeSource = $IncludeSource -or $Version -ne ''
-  New-DNNSite $Name -SiteZipPath:$SiteZipPath -DatabaseBackupPath:$DatabaseBackupPath -Version:$Version -IncludeSource:$IncludeSource -Domain:$Domain
+  New-DNNSite $Name -SiteZipPath:$SiteZipPath -DatabaseBackupPath:$DatabaseBackupPath -Version:$Version -IncludeSource:$IncludeSource -Domain:$Domain -GitRepository:$GitRepository
 
   <#
 .SYNOPSIS
@@ -386,6 +389,8 @@ function Restore-DNNSite {
     If specified, the DNN source for this version will be included with the site
 .PARAMETER Domain
     If specified, the Portal Alias table will be updated to replace the old site domain with the new site domain
+.PARAMETER GitRepository
+    If specified, the git repository at the given URL/path will be cloned into the site's folder
 #>
 }
 
@@ -465,7 +470,9 @@ function New-DNNSite {
     [string]$DatabaseBackupPath = '',
 
     [Alias("oldDomain")]
-    [string]$Domain = ''
+    [string]$Domain = '',
+
+    [string]$GitRepository = ''
   );
 
   Assert-AdministratorRole
@@ -505,6 +512,16 @@ function New-DNNSite {
 
   if ($PSCmdlet.ShouldProcess($websitePath, 'Set Modify File Permissions')) {
     Set-ModifyPermission -Directory:$websitePath -Username:$Name -WhatIf:$WhatIfPreference -Confirm:$false;
+  }
+
+  if ($GitRepository -and $PSCmdlet.ShouldProcess($GitRepository, 'Git clone')) {
+    $clonePath = Join-Path $sitePath 'Temp_GitClone';
+    git clone $GitRepository $clonePath;
+
+    $cloneContents = Join-Path $clonePath '*';
+    Move-Item $cloneContents $sitePath -Force -Confirm:$false;
+
+    Remove-Item $clonePath -Confirm:$false;
   }
 
   $webConfigPath = Join-Path $websitePath 'web.config';
@@ -756,6 +773,8 @@ function New-DNNSite {
     If specified, the DNN source for this version will be included with the site
 .PARAMETER Domain
     If specified, the Portal Alias table will be updated to replace the old site domain with the new site domain
+.PARAMETER GitRepository
+    If specified, the git repository at the given URL/path will be cloned into the site's folder
 #>
 }
 
