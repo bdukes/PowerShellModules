@@ -1,4 +1,4 @@
-#Requires -Version 3
+﻿#Requires -Version 3
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
 Set-StrictMode -Version:Latest
 
@@ -335,6 +335,7 @@ function Rename-DNNSite {
 }
 
 function Restore-DNNSite {
+  [CmdletBinding(SupportsShouldProcess)]
   param(
     [Alias("siteName")]
     [parameter(Mandatory = $true, position = 0)]
@@ -372,7 +373,64 @@ function Restore-DNNSite {
   }
 
   $IncludeSource = $IncludeSource -or $Version -ne ''
-  New-DNNSite $Name -SiteZipPath:$SiteZipPath -DatabaseBackupPath:$DatabaseBackupPath -Version:$Version -IncludeSource:$IncludeSource -Domain:$Domain -GitRepository:$GitRepository
+  New-DNNSite $Name -SiteZipPath:$SiteZipPath -DatabaseBackupPath:$DatabaseBackupPath -Version:$Version -IncludeSource:$IncludeSource -Domain:$Domain -GitRepository:$GitRepository;
+
+  $sitePath = Join-Path $www $Name;
+  $scriptsDir = Join-Path $sitePath '.dnn-website-management';
+  $restoreScript = Join-Path $scriptsDir 'restore-site.ps1';
+  if ((Test-Path $restoreScript)) {
+    $restoreArgs = @{};
+    $restoreCmd = Get-Command $restoreScript;
+    if ($restoreCmd.Parameters.ContainsKey('Name')) {
+      $restoreArgs['Name'] = $Name;
+    }
+    elseif ($restoreCmd.Parameters.ContainsKey('siteName')) {
+      $restoreArgs['siteName'] = $Name;
+    }
+    if ($restoreCmd.Parameters.ContainsKey('SiteZipPath')) {
+      $restoreArgs['SiteZipPath'] = $SiteZipPath;
+    }
+    elseif ($restoreCmd.Parameters.ContainsKey('siteZip')) {
+      $restoreArgs['siteZip'] = $SiteZipPath;
+    }
+    if ($restoreCmd.Parameters.ContainsKey('DatabaseBackupPath')) {
+      $restoreArgs['DatabaseBackupPath'] = $DatabaseBackupPath;
+    }
+    elseif ($restoreCmd.Parameters.ContainsKey('databaseBackup')) {
+      $restoreArgs['databaseBackup'] = $DatabaseBackupPath;
+    }
+    if ($restoreCmd.Parameters.ContainsKey('Version')) {
+      $restoreArgs['Version'] = $Version;
+    }
+    elseif ($restoreCmd.Parameters.ContainsKey('sourceVersion')) {
+      $restoreArgs['sourceVersion'] = $Version;
+    }
+    if ($restoreCmd.Parameters.ContainsKey('Domain')) {
+      $restoreArgs['Domain'] = $Domain;
+    }
+    elseif ($restoreCmd.Parameters.ContainsKey('oldDomain')) {
+      $restoreArgs['oldDomain'] = $Domain;
+    }
+    if ($restoreCmd.Parameters.ContainsKey('IncludeSource')) {
+      $restoreArgs['IncludeSource'] = $IncludeSource;
+    }
+    if ($restoreCmd.Parameters.ContainsKey('GitRepository')) {
+      $restoreArgs['GitRepository'] = $GitRepository;
+    }
+    if ($restoreCmd.Parameters.ContainsKey('WhatIf')) {
+      $restoreArgs['WhatIf'] = $WhatIfPreference;
+    }
+    if ($restoreCmd.Parameters.ContainsKey('Confirm')) {
+      $restoreArgs['Confirm'] = $ConfirmPreference -eq 'Low';
+    }
+    if ($restoreCmd.Parameters.ContainsKey('Verbose')) {
+      $restoreArgs['Verbose'] = $VerbosePreference -eq 'Continue';
+    }
+
+    if ($PSCmdlet.ShouldProcess($restoreScript, 'Run restore script') -or $restoreArgs['WhatIf']) {
+      & $restoreScript @restoreArgs;
+    }
+  }
 
   <#
 .SYNOPSIS
