@@ -1,5 +1,9 @@
 # Change Log
 
+- September 2022
+  - DnnWebsiteManagement 1.6.0
+    - Add `GitRepository` parameter to `New-DNNSite` and `Restore-DNNSite`
+    - If `GitRepository` or `SiteZipPath` includes `.dnn-website-management/restore-site.ps1`, this script is called at the end of `Restore-DNNSite`
 - August 2022
   - SslWebBinding 1.3.0
     - `New-SslWebBinding` will use `mkcert` to generate the certificate if installed
