@@ -1053,14 +1053,14 @@ function extractPackages {
     $directory = Split-Path $destination;
     $baseDirectory = Split-Path $directory;
     $directoryName = Split-Path $directory -Leaf;
-    New-Item -Path:$baseDirectory -Name:$directoryName -ItemType:Directory -Force | Out-Null;
-    Copy-Item $file.FullName $destination;
+    New-Item -Path:$baseDirectory -Name:$directoryName -ItemType:Directory -Force -Confirm:$false | Out-Null;
+    Copy-Item $file.FullName $destination -Confirm:$false;
   }
 
   Write-Progress -Activity:"Copying files to $to" -PercentComplete 100 -Completed;
 
   if ($SiteZipOutputPath) {
-    Remove-Item $SiteZipOutputPath -Force -Recurse
+    Remove-Item $SiteZipOutputPath -Force -Recurse -Confirm:$false;
   }
 }
 
@@ -1092,7 +1092,7 @@ function restoreDnnDatabase {
       $backupDir = $(Get-ItemProperty -path:$defaultInstanceInfoPath -name:BackupDirectory).BackupDirectory
       if ($backupDir) {
         $sqlAcl = Get-Acl $backupDir
-        Set-Acl $DatabaseBackupPath $sqlAcl
+        Set-Acl $DatabaseBackupPath $sqlAcl -Confirm:$false;
       }
       else {
         Write-Warning 'Unable to find SQL Server backup directory, backup file will not have ACL permissions set'
@@ -1128,7 +1128,7 @@ function restoreDnnDatabase {
   $dbRestoreLog.LogicalFileName = $logicalLogFileName;
   $dbRestoreLog.PhysicalFileName = Join-Path $server.Information.MasterDBLogPath ($Name + '_Log.ldf');
 
-  Restore-SqlDatabase -ReplaceDatabase -Database:$Name -RelocateFile:@($dbRestoreFile, $dbRestoreLog) -BackupFile:$DatabaseBackupPath -ServerInstance:'(local)';
+  Restore-SqlDatabase -ReplaceDatabase -Database:$Name -RelocateFile:@($dbRestoreFile, $dbRestoreLog) -BackupFile:$DatabaseBackupPath -ServerInstance:'(local)' -Confirm:$false;
 }
 
 function getDnnDatabaseObjectName {
