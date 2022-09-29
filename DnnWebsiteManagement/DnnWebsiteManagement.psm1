@@ -576,10 +576,8 @@ function New-DNNSite {
     $clonePath = Join-Path $sitePath 'Temp_GitClone';
     git clone $GitRepository $clonePath;
 
-    $cloneContents = Join-Path $clonePath '*';
-    Move-Item $cloneContents $sitePath -Force -Confirm:$false;
-
-    Remove-Item $clonePath -Confirm:$false;
+    moveWithProgress -from:$clonePath -to:$sitePath;
+    Remove-Item $clonePath -Recurse -Force -Confirm:$false;
   }
 
   $webConfigPath = Join-Path $websitePath 'web.config';
