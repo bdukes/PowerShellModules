@@ -1,6 +1,10 @@
 # Change Log
 
 - September 2022
+  - DnnWebsiteManagement 1.6.1
+    - Fix issue when `GitRepository` is passed on Windows Powershell
+    - Show progress when copying Git repository
+    - Move files from site backup instead of copy and delete (when backup is a zip, not a folder)
   - DnnWebsiteManagement 1.6.0
     - Add `GitRepository` parameter to `New-DNNSite` and `Restore-DNNSite`
     - If `GitRepository` or `SiteZipPath` includes `.dnn-website-management/restore-site.ps1`, this script is called at the end of `Restore-DNNSite`
