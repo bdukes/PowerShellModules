@@ -1100,26 +1100,50 @@ function extractPackages {
   }
   $from = $SiteZipPath
 
-  $filesToCopy = Get-ChildItem $from -Recurse -File;
+
+  if ($SiteZipOutputPath) {
+    moveWithProgress -from:$from -to:$to;
+    Remove-Item $SiteZipOutputPath -Force -Recurse -Confirm:$false;
+  }
+  else {
+    copyWithProgress -from:$from -to:$to;
+  }
+}
+
+function copyWithProgress($from, $to) {
+  processFilesWithProgress `
+    -from:$from `
+    -to:$to `
+    -process: { param($source, $destination); Copy-Item $source $destination -Force -Confirm:$false; } `
+    -activity:"Copying files to $to" `
+    -status:'Copying…';
+}
+function moveWithProgress($from, $to) {
+  processFilesWithProgress `
+    -from:$from `
+    -to:$to `
+    -process: { param($source, $destination); Move-Item $source $destination -Force -Confirm:$false; } `
+    -activity:"Moving files to $to" `
+    -status:'Moving…';
+}
+
+function processFilesWithProgress($from, $to, [scriptblock]$process, $activity, $status) {
+  $filesToCopy = Get-ChildItem $from -Recurse -File -Force;
   $totalCount = $filesToCopy.Count;
   $progressCount = 0;
-  Write-Progress -Activity:"Copying files to $to" -Status 'Copying…' -PercentComplete 0;
+  Write-Progress -Activity:$activity -Status:$status -PercentComplete 0;
   foreach ($file in $filesToCopy) {
     $progressCount += 1;
     $destination = $file.FullName -replace [regex]::escape($from), $to;
-    Write-Progress -Activity:"Copying files to $to" -Status 'Copying…' -PercentComplete ($progressCount / $totalCount * 100) -CurrentOperation:$destination;
+    Write-Progress -Activity:$activity -Status:$status -PercentComplete ($progressCount / $totalCount * 100) -CurrentOperation:$destination;
     $directory = Split-Path $destination;
     $baseDirectory = Split-Path $directory;
     $directoryName = Split-Path $directory -Leaf;
     New-Item -Path:$baseDirectory -Name:$directoryName -ItemType:Directory -Force -Confirm:$false | Out-Null;
-    Copy-Item $file.FullName $destination -Confirm:$false;
+    Invoke-Command -ScriptBlock:$process -ArgumentList:@($file.FullName, $destination);
   }
 
-  Write-Progress -Activity:"Copying files to $to" -PercentComplete 100 -Completed;
-
-  if ($SiteZipOutputPath) {
-    Remove-Item $SiteZipOutputPath -Force -Recurse -Confirm:$false;
-  }
+  Write-Progress -Activity:$activity -PercentComplete 100 -Completed;
 }
 
 function newDnnDatabase {
