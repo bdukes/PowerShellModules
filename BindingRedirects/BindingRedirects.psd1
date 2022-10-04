@@ -12,7 +12,7 @@
     RootModule        = 'BindingRedirects.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.1.1'
+    ModuleVersion     = '0.1.2'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@
     CompanyName       = 'Engage Software'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2019 Engage Software'
+    Copyright         = '(c) 2022 Engage Software'
 
     # Description of the functionality provided by this module
     Description       = 'Synchronizes web.config binding redirects with the DLL files in the bin folder'

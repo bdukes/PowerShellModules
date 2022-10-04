@@ -1,5 +1,8 @@
 # Change Log
 
+- October 2022
+  - BindingRedirects 0.1.2
+    - Fix issue `web.config` contains `dependentAssembly` without `bindingRedirect` element (e.g. when `codeBase` element is used instead)
 - September 2022
   - DnnWebsiteManagement 1.6.1
     - Fix issue when `GitRepository` is passed on Windows Powershell
