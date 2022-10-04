@@ -26,9 +26,12 @@ function Sync-BindingRedirect {
   [xml]$config = Get-Content $webConfigPath;
 
   $assemblies = @($config.configuration.runtime.assemblyBinding.GetElementsByTagName("dependentAssembly") | Where-Object {
-      $assemblyFileName = "$($_.assemblyIdentity.name).dll";
-      $path = Join-Path $binPath $assemblyFileName;
-      (test-path $path) -and ([System.Reflection.AssemblyName]::GetAssemblyName($path).Version.ToString() -ne $_.bindingRedirect.newVersion);
+      if (Get-Member -Name 'bindingRedirect' -InputObject $_) {
+        $assemblyFileName = "$($_.assemblyIdentity.name).dll";
+        $path = Join-Path $binPath $assemblyFileName;
+        return (test-path $path) -and ([System.Reflection.AssemblyName]::GetAssemblyName($path).Version.ToString() -ne $_.bindingRedirect.newVersion);
+      }
+      else { return $false; }
     });
 
   foreach ($assembly in $assemblies) {
