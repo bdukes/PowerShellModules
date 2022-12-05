@@ -200,7 +200,7 @@ function Rename-DNNSite {
   $newSitePath = Join-Path $www $NewName;
   if (Test-Path $oldSitePath) {
     if ($PSCmdlet.ShouldProcess($oldSitePath, "Rename to $newSitePath")) {
-      Rename-Item $sitePath $newSitePath -WhatIf:$WhatIfPreference -Confirm:$false;
+      Rename-Item $oldSitePath $newSitePath -WhatIf:$WhatIfPreference -Confirm:$false;
     }
   }
   else {
@@ -975,9 +975,9 @@ function extractPackages {
 
   $SiteZipOutputPath = $null;
   $CopyEntireDirectory = $false;
+  $sitePath = Join-Path $www $Name;
   if ($SiteZipPath -ne '') {
     if (Test-Path $SiteZipPath -PathType Leaf) {
-      $sitePath = Join-Path $www $Name;
       $SiteZipOutputPath = Join-Path $sitePath 'Extracted_Website';
       extractZip $SiteZipOutputPath $SiteZipPath;
       $SiteZipPath = $SiteZipOutputPath

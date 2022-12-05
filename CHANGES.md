@@ -1,5 +1,8 @@
 # Change Log
 
+- December 2022
+  - DnnWebsiteManagement 1.6.2
+    - Fix issue creating a site from a version instead of a zip
 - October 2022
   - BindingRedirects 0.1.2
     - Fix issue `web.config` contains `dependentAssembly` without `bindingRedirect` element (e.g. when `codeBase` element is used instead)
