@@ -1,6 +1,8 @@
 # Change Log
 
 - April 2023
+  - DnnWebsiteManagement 1.7.1
+    - Don't show warning about obsolete encrypt parameter
   - DnnWebsiteManagement 1.7.0
     - Don't encrypt connections to SQL Server
 - December 2022

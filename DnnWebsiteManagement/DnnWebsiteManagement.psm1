@@ -135,8 +135,8 @@ function Remove-DNNSite {
   $databasePath = Join-Path $databasesSqlPath (ConvertTo-EncodedSqlName $Name);
   if (Test-Path $databasePath) {
     if ($PSCmdlet.ShouldProcess($Name, 'Drop Database')) {
-      Invoke-Sqlcmd -Query:"ALTER DATABASE [$Name] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"DROP DATABASE [$Name];" -ServerInstance:. -Database:master -EncryptConnection:$false
+      invokeSql -Query:"ALTER DATABASE [$Name] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -Database:master
+      invokeSql -Query:"DROP DATABASE [$Name];" -Database:master
     }
   }
   else {
@@ -148,7 +148,7 @@ function Remove-DNNSite {
   $loginPath = Join-Path $loginsPath (ConvertTo-EncodedSqlName $loginName);
   if (Test-Path $loginPath) {
     if ($PSCmdlet.ShouldProcess($loginName, 'Drop login')) {
-      Invoke-Sqlcmd -Query:"DROP LOGIN [$loginName];" -Database:master -EncryptConnection:$false
+      invokeSql -Query:"DROP LOGIN [$loginName];" -Database:master
     }
   }
   else {
@@ -234,11 +234,11 @@ function Rename-DNNSite {
   $databasePath = Join-Path $databasesSqlPath (ConvertTo-EncodedSqlName $Name);
   if (Test-Path $databasePath) {
     if ($PSCmdlet.ShouldProcess("$Name", "Close database connection")) {
-      Invoke-Sqlcmd -Query:"ALTER DATABASE [$Name] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master -EncryptConnection:$false
+      invokeSql -Query:"ALTER DATABASE [$Name] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" -Database:master
     }
     if ($PSCmdlet.ShouldProcess("$Name", "Rename database to $NewName")) {
-      Invoke-Sqlcmd -Query:"ALTER DATABASE [$Name] MODIFY NAME = [$NewName];" -ServerInstance:. -Database:master -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"ALTER DATABASE [$NewName] SET MULTI_USER WITH ROLLBACK IMMEDIATE;" -ServerInstance:. -Database:master -EncryptConnection:$false
+      invokeSql -Query:"ALTER DATABASE [$Name] MODIFY NAME = [$NewName];" -Database:master
+      invokeSql -Query:"ALTER DATABASE [$NewName] SET MULTI_USER WITH ROLLBACK IMMEDIATE;" -Database:master
     }
   }
   else {
@@ -251,34 +251,34 @@ function Rename-DNNSite {
   $newLoginPath = Join-Path $loginsPath (ConvertTo-EncodedSqlName $newLoginName);
   if (-not (Test-Path $newLoginPath)) {
     if ($PSCmdlet.ShouldProcess($newLoginName, "Create SQL Server login")) {
-      Invoke-Sqlcmd -Query:"CREATE LOGIN [$newLoginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$NewName];" -Database:master -EncryptConnection:$false
+      invokeSql -Query:"CREATE LOGIN [$newLoginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$NewName];" -Database:master
     }
   }
 
   if ($PSCmdlet.ShouldProcess($newLoginName, "Create SQL Server user")) {
-    Invoke-Sqlcmd -Query:"CREATE USER [$newLoginName] FOR LOGIN [$newLoginName];" -Database:$NewName -EncryptConnection:$false
+    invokeSql -Query:"CREATE USER [$newLoginName] FOR LOGIN [$newLoginName];" -Database:$NewName
   }
 
   if ($PSCmdlet.ShouldProcess($newLoginName, "Add SQL Server user to db_owner role")) {
-    Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'$newLoginName';" -Database:$NewName -EncryptConnection:$false
+    invokeSql -Query:"EXEC sp_addrolemember N'db_owner', N'$newLoginName';" -Database:$NewName
   }
 
-  $ownedRoles = Invoke-SqlCmd -Query:"SELECT p2.name FROM sys.database_principals p1 JOIN sys.database_principals p2 ON p1.principal_id = p2.owning_principal_id WHERE p1.name = '$newLoginName';" -Database:$NewName -EncryptConnection:$false
+  $ownedRoles = invokeSql -Query:"SELECT p2.name FROM sys.database_principals p1 JOIN sys.database_principals p2 ON p1.principal_id = p2.owning_principal_id WHERE p1.name = '$newLoginName';" -Database:$NewName
   foreach ($roleRow in $ownedRoles) {
     $roleName = $roleRow.name
     if ($PSCmdlet.ShouldProcess("$roleName", "Transfer role ownership to $newLoginName")) {
-      Invoke-SqlCmd -Query:"ALTER AUTHORIZATION ON ROLE::[$roleName] TO [$newLoginName];" -Database:$NewName -EncryptConnection:$false
+      invokeSql -Query:"ALTER AUTHORIZATION ON ROLE::[$roleName] TO [$newLoginName];" -Database:$NewName
     }
   }
 
   if ($PSCmdlet.ShouldProcess($oldLoginName, "Drop SQL Server user")) {
-    Invoke-Sqlcmd -Query:"DROP USER [$oldLoginName];" -Database:$NewName -EncryptConnection:$false
+    invokeSql -Query:"DROP USER [$oldLoginName];" -Database:$NewName
   }
 
   $oldLoginPath = Join-Path $loginsPath (ConvertTo-EncodedSqlName $oldLoginName);
   if (Test-Path $oldLoginPath) {
     if ($PSCmdlet.ShouldProcess($oldLoginName, "Drop SQL Server login")) {
-      Invoke-Sqlcmd -Query:"DROP LOGIN [$oldLoginName];" -Database:master -EncryptConnection:$false
+      invokeSql -Query:"DROP LOGIN [$oldLoginName];" -Database:master
     }
   }
   else {
@@ -301,7 +301,7 @@ function Rename-DNNSite {
   }
 
   if ($PSCmdlet.ShouldProcess("$NewName", "Replace $Name in portal aliases")) {
-    Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Name', '$NewName')" -Database:$NewName -EncryptConnection:$false
+    invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Name', '$NewName')" -Database:$NewName
   }
 
   if ($PSCmdlet.ShouldProcess("$Name", "Remove HOSTS file entry")) {
@@ -591,7 +591,7 @@ function New-DNNSite {
   else {
     if ($PSCmdlet.ShouldProcess($DatabaseBackupPath, 'Restore Database')) {
       restoreDnnDatabase $Name (Get-Item $DatabaseBackupPath).FullName -ErrorAction Stop;
-      Invoke-Sqlcmd -Query:"ALTER DATABASE [$Name] SET RECOVERY SIMPLE" -EncryptConnection:$false
+      invokeSql -Query:"ALTER DATABASE [$Name] SET RECOVERY SIMPLE"
     }
 
     $ObjectQualifier = $webConfig.configuration.dotnetnuke.data.providers.add.objectQualifier.TrimEnd('_')
@@ -599,11 +599,11 @@ function New-DNNSite {
 
     if ($Domain -ne '') {
       if ($PSCmdlet.ShouldProcess($Name, 'Update Portal Aliases')) {
-        Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Domain', '$Name')" -Database:$Name -EncryptConnection:$false
-        Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = REPLACE(SettingValue, '$Domain', '$Name') WHERE SettingName = 'DefaultPortalAlias'" -Database:$Name -EncryptConnection:$false
+        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Domain', '$Name')" -Database:$Name
+        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = REPLACE(SettingValue, '$Domain', '$Name') WHERE SettingName = 'DefaultPortalAlias'" -Database:$Name
       }
 
-      $aliases = Invoke-Sqlcmd -Query:"SELECT HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE HTTPAlias != '$Name'" -Database:$Name -EncryptConnection:$false
+      $aliases = invokeSql -Query:"SELECT HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE HTTPAlias != '$Name'" -Database:$Name
       foreach ($aliasRow in $aliases) {
         $alias = $aliasRow.HTTPAlias
         Write-Verbose "Updating $alias"
@@ -638,7 +638,7 @@ function New-DNNSite {
           }
 
           if ($PSCmdlet.ShouldProcess($newAlias, 'Rename alias')) {
-            Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$Name -EncryptConnection:$false
+            invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$Name
           }
         }
 
@@ -675,35 +675,35 @@ function New-DNNSite {
     $tablesPath = Join-Path $databasePath 'Tables';
     $catalookSettingsTablePath = Join-Path $tablesPath "$DatabaseOwner.${oq}CAT_Settings";
     if ((Test-Path $catalookSettingsTablePath) -and ($PSCmdlet.ShouldProcess($Name, 'Set Catalook to test mode'))) {
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'CAT_Settings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'CAT_Settings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET PostItems = 0, StorePaymentTypes = 32, StoreCCTypes = 23, CCLogin = '${env:CatalookTestCCLogin}', CCPassword = '${env:CatalookTestCCPassword}', CCMerchantHash = '${env:CatalookTestCCMerchantHash}', StoreCurrencyid = 2, CCPaymentProcessorID = 59, LicenceKey = '${env:CatalookTestLicenseKey}', StoreEmail = '${env:CatalookTestStoreEmail}', Skin = '${env:CatalookTestSkin}', EmailTemplatePackage = '${env:CatalookTestEmailTemplatePackage}', CCTestMode = 1, EnableAJAX = 1" -Database:$Name
     }
 
     $esmSettingsTablePath = Join-Path $tablesPath "$DatabaseOwner.${oq}esm_Settings";
     $esmSettingsColumnsPath = Join-Path $esmSettingsTablePath 'Columns';
     $esmSettingsFattmerchantPath = Join-Path $esmSettingsColumnsPath 'FattmerchantMerchantId';
     if ((Test-Path $esmSettingsFattmerchantPath) -and ($PSCmdlet.ShouldProcess($Name, 'Set FattMerchant to test mode'))) {
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET MerchantRegistrationStatusId = null, FattmerchantMerchantId = null, FattmerchantApiKey = '${env:FattmerchantTestApiKey}', FattmerchantPaymentsToken = '${env:FattmerchantTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET MerchantRegistrationStatusId = null, FattmerchantMerchantId = null, FattmerchantApiKey = '${env:FattmerchantTestApiKey}', FattmerchantPaymentsToken = '${env:FattmerchantTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$Name
     }
 
     $esmSettingsStaxPath = Join-Path $esmSettingsColumnsPath 'StaxMerchantId';
     if ((Test-Path $esmSettingsStaxPath) -and ($PSCmdlet.ShouldProcess($Name, 'Set Stax to test mode'))) {
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET MerchantRegistrationStatusId = null, StaxMerchantId = null, StaxApiKey = '${env:StaxTestApiKey}', StaxPaymentsToken = '${env:StaxTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Settings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET MerchantRegistrationStatusId = null, StaxMerchantId = null, StaxApiKey = '${env:StaxTestApiKey}', StaxPaymentsToken = '${env:StaxTestPaymentsToken}' WHERE CCPaymentProcessorID = 185" -Database:$Name
     }
 
     $esmParticipantTablePath = Join-Path $tablesPath "$DatabaseOwner.${oq}esm_Participant";
     if ((Test-Path $esmParticipantTablePath) -and ($PSCmdlet.ShouldProcess($Name, 'Turn off payment processing for Engage: AMS'))) {
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Participant' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET PaymentProcessorCustomerId = NULL" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'esm_Participant' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET PaymentProcessorCustomerId = NULL" -Database:$Name
     }
 
     if ($PSCmdlet.ShouldProcess($Name, 'Turn off SMTP for Mandeeps Live Campaign')) {
       $liveCampaignSettingTablePath = Join-Path $tablesPath "$DatabaseOwner.${oq}LiveCampaign_Setting";
       if (Test-Path $liveCampaignSettingTablePath) {
-        Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_Setting' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SMTPServerMode = 'DNNHostSettings', SendGridAPI = NULL WHERE SMTPServerMode = 'Sendgrid'" -Database:$Name -EncryptConnection:$false
+        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_Setting' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SMTPServerMode = 'DNNHostSettings', SendGridAPI = NULL WHERE SMTPServerMode = 'Sendgrid'" -Database:$Name
       }
 
       $liveCampaignSmtpTablePath = Join-Path $tablesPath "$DatabaseOwner.${oq}LiveCampaign_SmtpServer";
       if (Test-Path $liveCampaignSmtpTablePath) {
-        Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_SmtpServer' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET Server = 'localhost', Username = '', Password = ''" -Database:$Name -EncryptConnection:$false
+        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'LiveCampaign_SmtpServer' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET Server = 'localhost', Username = '', Password = ''" -Database:$Name
       }
     }
 
@@ -715,33 +715,33 @@ function New-DNNSite {
 
     Write-Information "Setting SMTP to localhost"
     if ($PSCmdlet.ShouldProcess($Name, 'Set SMTP to localhost')) {
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$Name -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$Name -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$Name -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$Name -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$Name
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$Name
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$Name
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$Name
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$Name
 
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$Name -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$Name -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$Name -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$Name -EncryptConnection:$false
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -Database:$Name
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -Database:$Name
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -Database:$Name
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -Database:$Name
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -Database:$Name
     }
 
     if ($PSCmdlet.ShouldProcess($Name, 'Clear WebServers table')) {
-      Invoke-Sqlcmd -Query:"TRUNCATE TABLE $(getDnnDatabaseObjectName -objectName:'WebServers' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier)" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"TRUNCATE TABLE $(getDnnDatabaseObjectName -objectName:'WebServers' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier)" -Database:$Name
     }
 
     if ($PSCmdlet.ShouldProcess($Name, 'Turn off event log buffer')) {
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'EventLogBuffer'" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'EventLogBuffer'" -Database:$Name
     }
 
     if ($PSCmdlet.ShouldProcess($Name, 'Turn off search crawler')) {
-      Invoke-Sqlcmd -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'Schedule' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET Enabled = 0 WHERE TypeFullName = 'DotNetNuke.Professional.SearchCrawler.SearchSpider.SearchSpider, DotNetNuke.Professional.SearchCrawler'" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'Schedule' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET Enabled = 0 WHERE TypeFullName = 'DotNetNuke.Professional.SearchCrawler.SearchSpider.SearchSpider, DotNetNuke.Professional.SearchCrawler'" -Database:$Name
     }
 
     if ($PSCmdlet.ShouldProcess($Name, "Set all passwords to 'pass'")) {
-      Invoke-Sqlcmd -Query:"UPDATE aspnet_Membership SET PasswordFormat = 0, Password = 'pass'" -Database:$Name -EncryptConnection:$false
+      invokeSql -Query:"UPDATE aspnet_Membership SET PasswordFormat = 0, Password = 'pass'" -Database:$Name
     }
 
     if ($PSCmdlet.ShouldProcess($Name, 'Watermark site logo(s)')) {
@@ -783,14 +783,14 @@ function New-DNNSite {
   $loginsPath = Join-Path $localSqlPath 'Logins';
   $loginPath = Join-Path $loginsPath (ConvertTo-EncodedSqlName $loginName);
   if ((-not (Test-Path $loginPath)) -and ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server login'))) {
-    Invoke-Sqlcmd -Query:"CREATE LOGIN [$loginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$Name];" -Database:master -EncryptConnection:$false
+    invokeSql -Query:"CREATE LOGIN [$loginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$Name];" -Database:master
   }
 
   if ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server User')) {
-    Invoke-Sqlcmd -Query:"CREATE USER [$loginName] FOR LOGIN [$loginName];" -Database:$Name -EncryptConnection:$false
+    invokeSql -Query:"CREATE USER [$loginName] FOR LOGIN [$loginName];" -Database:$Name
   }
   if ($PSCmdlet.ShouldProcess($loginName, 'Add db_owner role')) {
-    Invoke-Sqlcmd -Query:"EXEC sp_addrolemember N'db_owner', N'$loginName';" -Database:$Name -EncryptConnection:$false
+    invokeSql -Query:"EXEC sp_addrolemember N'db_owner', N'$loginName';" -Database:$Name
   }
 
   if ($PSCmdlet.ShouldProcess($Name, 'Add HTTPS bindings')) {
@@ -1116,6 +1116,7 @@ function copyWithProgress($from, $to) {
     -activity:"Copying files to $to" `
     -status:'Copying…';
 }
+
 function moveWithProgress($from, $to) {
   processFilesWithProgress `
     -from:$from `
@@ -1144,14 +1145,33 @@ function processFilesWithProgress($from, $to, [scriptblock]$process, $activity, 
   Write-Progress -Activity:$activity -PercentComplete 100 -Completed;
 }
 
+$sqlModuleHasEncryptParam = $null -ne (Get-Command Invoke-Sqlcmd).Parameters['Encrypt'];
+function invokeSql
+{
+  param(
+    [parameter(Mandatory = $true, position = 0)]
+    [string]$Query,
+    [parameter(Mandatory = $true, position = 1)]
+    [string]$Database
+  );
+
+  if ($sqlModuleHasEncryptParam) {
+    Invoke-Sqlcmd -Query:$Query -Database:$Database -Encrypt:Optional;
+  }
+  else {
+    Invoke-Sqlcmd -Query:$Query -Database:$Database -EncryptConnection:$false;
+  }
+}
+
+
 function newDnnDatabase {
   param(
     [parameter(Mandatory = $true, position = 0)]
     [string]$Name
   );
 
-  Invoke-Sqlcmd -Query:"CREATE DATABASE [$Name];" -Database:master -EncryptConnection:$false
-  Invoke-Sqlcmd -Query:"ALTER DATABASE [$Name] SET RECOVERY SIMPLE;" -Database:master -EncryptConnection:$false
+  invokeSql -Query:"CREATE DATABASE [$Name];" -Database:master;
+  invokeSql -Query:"ALTER DATABASE [$Name] SET RECOVERY SIMPLE;" -Database:master;
 }
 
 function restoreDnnDatabase {
@@ -1271,7 +1291,7 @@ function watermarkLogos {
 
   $sitePath = Join-Path $www $Name;
   $websitePath = Join-Path $sitePath 'Website';
-  $logos = Invoke-Sqlcmd -Query:"SELECT HomeDirectory + N'/' + LogoFile AS Logo FROM $(getDnnDatabaseObjectName -objectName:'Vw_Portals' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE LogoFile IS NOT NULL" -Database:$Name -EncryptConnection:$false
+  $logos = invokeSql -Query:"SELECT HomeDirectory + N'/' + LogoFile AS Logo FROM $(getDnnDatabaseObjectName -objectName:'Vw_Portals' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE LogoFile IS NOT NULL" -Database:$Name
   $watermarkText = $NameExtension.Substring(1)
   foreach ($logo in $logos) {
     $logoFile = Join-Path $websitePath $logo.Logo.Replace('/', '\');
