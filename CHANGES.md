@@ -1,5 +1,8 @@
 # Change Log
 
+- April 2023
+  - DnnWebsiteManagement 1.7.0
+    - Don't encrypt connections to SQL Server
 - December 2022
   - DnnWebsiteManagement 1.6.2
     - Fix issue creating a site from a version instead of a zip
