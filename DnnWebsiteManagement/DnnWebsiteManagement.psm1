@@ -591,7 +591,7 @@ function New-DNNSite {
   else {
     if ($PSCmdlet.ShouldProcess($DatabaseBackupPath, 'Restore Database')) {
       restoreDnnDatabase $Name (Get-Item $DatabaseBackupPath).FullName -ErrorAction Stop;
-      invokeSql -Query:"ALTER DATABASE [$Name] SET RECOVERY SIMPLE"
+      invokeSql -Query:"ALTER DATABASE [$Name] SET RECOVERY SIMPLE" -Database:master
     }
 
     $ObjectQualifier = $webConfig.configuration.dotnetnuke.data.providers.add.objectQualifier.TrimEnd('_')
@@ -1146,8 +1146,7 @@ function processFilesWithProgress($from, $to, [scriptblock]$process, $activity, 
 }
 
 $sqlModuleHasEncryptParam = $null -ne (Get-Command Invoke-Sqlcmd).Parameters['Encrypt'];
-function invokeSql
-{
+function invokeSql {
   param(
     [parameter(Mandatory = $true, position = 0)]
     [string]$Query,
