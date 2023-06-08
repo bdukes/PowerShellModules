@@ -363,7 +363,10 @@ function Restore-DNNSite {
     [switch]$IncludeSource = $defaultIncludeSource,
 
     [parameter(Mandatory = $false)]
-    [string]$GitRepository = ''
+    [string]$GitRepository = '',
+
+    [parameter(Mandatory = $false)]
+    [switch]$Interactive
   );
 
   $siteZipFile = Get-Item $SiteZipPath
@@ -373,7 +376,7 @@ function Restore-DNNSite {
   }
 
   $IncludeSource = $IncludeSource -or $Version -ne ''
-  New-DNNSite $Name -SiteZipPath:$SiteZipPath -DatabaseBackupPath:$DatabaseBackupPath -Version:$Version -IncludeSource:$IncludeSource -Domain:$Domain -GitRepository:$GitRepository;
+  New-DNNSite $Name -SiteZipPath:$SiteZipPath -DatabaseBackupPath:$DatabaseBackupPath -Version:$Version -IncludeSource:$IncludeSource -Domain:$Domain -GitRepository:$GitRepository -Interactive:$Interactive;
 
   $sitePath = Join-Path $www $Name;
   $scriptsDir = Join-Path $sitePath '.dnn-website-management';
@@ -530,7 +533,9 @@ function New-DNNSite {
     [Alias("oldDomain")]
     [string]$Domain = '',
 
-    [string]$GitRepository = ''
+    [string]$GitRepository = '',
+
+    [switch]$Interactive
   );
 
   Assert-AdministratorRole
@@ -599,8 +604,30 @@ function New-DNNSite {
 
     if ($Domain -ne '') {
       if ($PSCmdlet.ShouldProcess($Name, 'Update Portal Aliases')) {
-        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Domain', '$Name')" -Database:$Name
-        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = REPLACE(SettingValue, '$Domain', '$Name') WHERE SettingName = 'DefaultPortalAlias'" -Database:$Name
+        $aliasCounter = invokeSql -Query:"SELECT count(*) AliasCount FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier)" -Database:$Name
+        $aliasCount = $aliasCounter.aliasCount
+        $ProcessManual = ''
+
+        if ($Interactive.IsPresent) {
+          $ProcessManual = Read-Host -Prompt "Would you like to manually rename all $aliasCount portal aliases? (y/n)"
+          while("y","n" -notcontains $ProcessManual ) {
+            $ProcessManual = Read-Host -Prompt "Would you like to manually rename all $aliasCount portal aliases? (y/n)"
+          }
+        }
+        
+        if ($ProcessManual -eq 'y') {
+          $oldAliases = invokeSql -Query:"SELECT HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier)" -Database:$Name
+          foreach ($aliasRow in $oldAliases) {
+            $alias = $aliasRow.HTTPAlias
+            $updatedAlias = Read-Host -Prompt "New name for '$alias'"
+            invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = '$updatedAlias' WHERE HTTPAlias = '$alias'" -Database:$Name
+            invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '$updatedAlias' WHERE SettingName = 'DefaultPortalAlias' AND SettingValue = '$alias'" -Database:$Name
+          }
+        }
+        else {
+          invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Domain', '$Name')" -Database:$Name
+          invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = REPLACE(SettingValue, '$Domain', '$Name') WHERE SettingName = 'DefaultPortalAlias'" -Database:$Name
+        }
       }
 
       $aliases = invokeSql -Query:"SELECT HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE HTTPAlias != '$Name'" -Database:$Name
