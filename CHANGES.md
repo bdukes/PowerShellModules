@@ -1,5 +1,10 @@
 # Change Log
 
+- June 2023
+  - DnnWebsiteManagement 1.8.0
+    - Allow interactively choosing new portal aliases during restore ([#24](https://github.com/bdukes/PowerShellModules/pull/24), thanks [@engage-chancock](https://github.com/engage-chancock)!)
+    - Allow passing a zipped backup
+    - Fix issue with script requesting database name
 - April 2023
   - DnnWebsiteManagement 1.7.1
     - Don't show warning about obsolete encrypt parameter
