@@ -369,10 +369,21 @@ function Restore-DNNSite {
     [switch]$Interactive
   );
 
+  $databaseBackupFolder = '';
   $siteZipFile = Get-Item $SiteZipPath
   if ($siteZipFile.Extension -eq '.bak') {
     $SiteZipPath = $DatabaseBackupPath
     $DatabaseBackupPath = $siteZipFile.FullName
+  }
+  else {
+    $DatabaseBackupFile = Get-Item $DatabaseBackupPath;
+    if ($DatabaseBackupFile.Extension -ne '.bak') {
+      if ($PSCmdlet.ShouldProcess($DatabaseBackupPath, 'Unzip backup file')) {
+        $databaseBackupFolder = Join-Path -Path $([System.IO.Path]::GetTempPath()) -ChildPath "dnn-website-management-db-$(Get-Date -Format 'yyyyMMddHHmmss')";
+        extractZip -output:$databaseBackupFolder -zipFile:$DatabaseBackupPath;
+        $DatabaseBackupPath = Get-Item -Path:"$databaseBackupFolder/*.bak";
+      }
+    }
   }
 
   $IncludeSource = $IncludeSource -or $Version -ne ''
@@ -433,6 +444,10 @@ function Restore-DNNSite {
     if ($PSCmdlet.ShouldProcess($restoreScript, 'Run restore script') -or $restoreArgs['WhatIf']) {
       & $restoreScript @restoreArgs;
     }
+  }
+
+  if ($databaseBackupFolder -and $PSCmdlet.ShouldProcess($databaseBackupFolder, 'Delete database backup folder')) {
+    Remove-Item $databaseBackupFolder -Force -Recurse;
   }
 
   <#
