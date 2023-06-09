@@ -1,5 +1,5 @@
 ﻿#Requires -Version 3
-#Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration
+#Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration, Read-Choice
 Set-StrictMode -Version:Latest
 
 $defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
@@ -452,6 +452,8 @@ function Restore-DNNSite {
     If specified, the Portal Alias table will be updated to replace the old site domain with the new site domain
 .PARAMETER GitRepository
     If specified, the git repository at the given URL/path will be cloned into the site's folder
+.PARAMETER Interactive
+    Whether the cmdlet can prompt the user for additional information (e.g. how to rename additional portal aliases)
 #>
 }
 
@@ -602,72 +604,41 @@ function New-DNNSite {
     $ObjectQualifier = $webConfig.configuration.dotnetnuke.data.providers.add.objectQualifier.TrimEnd('_')
     $DatabaseOwner = $webConfig.configuration.dotnetnuke.data.providers.add.databaseOwner.TrimEnd('.')
 
-    if ($Domain -ne '') {
-      if ($PSCmdlet.ShouldProcess($Name, 'Update Portal Aliases')) {
-        $aliasCounter = invokeSql -Query:"SELECT count(*) AliasCount FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier)" -Database:$Name
-        $aliasCount = $aliasCounter.aliasCount
-        $ProcessManual = ''
+    if ($PSCmdlet.ShouldProcess($Name, 'Update Portal Aliases')) {
+      if ($Domain -ne '') {
+        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Domain', '$Name')" -Database:$Name
+        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = REPLACE(SettingValue, '$Domain', '$Name') WHERE SettingName = 'DefaultPortalAlias'" -Database:$Name
+      }
+
+      $aliases = invokeSql -Query:"SELECT PortalID, HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE HTTPAlias != '$Name' ORDER BY PortalID, HTTPAlias" -Database:$Name
+      if ($Domain -ne '') {
+        $aliasCount = $aliases.Count
+        $ProcessManual = $false
 
         if ($Interactive.IsPresent) {
-          $ProcessManual = Read-Host -Prompt "Would you like to manually rename all $aliasCount portal aliases? (y/n)"
-          while("y","n" -notcontains $ProcessManual ) {
-            $ProcessManual = Read-Host -Prompt "Would you like to manually rename all $aliasCount portal aliases? (y/n)"
-          }
+          $ProcessManual = Read-BooleanChoice -caption:'Manually Rename Portal Aliases' -message:"Would you like to specify new HTTP aliases for all $aliasCount aliases?" -defaultChoice:$true
         }
-        
-        if ($ProcessManual -eq 'y') {
-          $oldAliases = invokeSql -Query:"SELECT HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier)" -Database:$Name
-          foreach ($aliasRow in $oldAliases) {
-            $alias = $aliasRow.HTTPAlias
-            $updatedAlias = Read-Host -Prompt "New name for '$alias'"
-            invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = '$updatedAlias' WHERE HTTPAlias = '$alias'" -Database:$Name
-            invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '$updatedAlias' WHERE SettingName = 'DefaultPortalAlias' AND SettingValue = '$alias'" -Database:$Name
+
+        foreach ($aliasRow in $aliases) {
+          $alias = $aliasRow.HTTPAlias
+          Write-Verbose "Updating $alias"
+          $newAlias = renameAlias -Domain:$Domain -Name:$Name -Alias:$alias -NameExtension:$NameExtension;
+          if ($ProcessManual) {
+            $customAlias = Read-Host -Prompt "New name for Portal ID $($aliasRow.PortalID) alias: '$alias' (default: $newAlias)"
+            $newAlias = if ($customAlias) { $customAlias } else { $newAlias }
           }
-        }
-        else {
-          invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Domain', '$Name')" -Database:$Name
-          invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = REPLACE(SettingValue, '$Domain', '$Name') WHERE SettingName = 'DefaultPortalAlias'" -Database:$Name
+          if ($PSCmdlet.ShouldProcess($newAlias, 'Rename alias')) {
+            invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$Name
+            invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '$newAlias' WHERE SettingName = 'DefaultPortalAlias' AND SettingValue = '$alias'" -Database:$Name
+          }
         }
       }
 
-      $aliases = invokeSql -Query:"SELECT HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE HTTPAlias != '$Name'" -Database:$Name
+      $aliases = invokeSql -Query:"SELECT HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) ORDER BY PortalID, HTTPAlias" -Database:$Name
       foreach ($aliasRow in $aliases) {
-        $alias = $aliasRow.HTTPAlias
-        Write-Verbose "Updating $alias"
-        if ($alias -Like '*/*') {
-          $split = $alias.Split('/')
-          $aliasHost = $split[0]
-          $childAlias = $split[1..($split.length - 1)] -join '/'
-        }
-        else {
-          $aliasHost = $alias
-          $childAlias = $null
-        }
-
-        if ($aliasHost -Like '*:*') {
-          $split = $aliasHost.Split(':')
-          $aliasHost = $split[0]
-          $port = $split[1]
-        }
-        else {
-          $port = 80
-        }
-
-        if ($aliasHost -NotLike "*$Name*") {
-          $aliasHost = $aliasHost + $NameExtension
-          $newAlias = $aliasHost
-          if ($port -ne 80) {
-            $newAlias = $newAlias + ':' + $port
-          }
-
-          if ($childAlias) {
-            $newAlias = $newAlias + '/' + $childAlias
-          }
-
-          if ($PSCmdlet.ShouldProcess($newAlias, 'Rename alias')) {
-            invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = '$newAlias' WHERE HTTPAlias = '$alias'" -Database:$Name
-          }
-        }
+        $aliasInfo = readPortalAlias -Alias:$aliasRow.HTTPAlias;
+        $aliasHost = $aliasInfo.host;
+        $port = $aliasInfo.port;
 
         $existingBinding = Get-IISSiteBinding -Name:$Name -BindingInformation:"*:$($port):$aliasHost" -Protocol:http
         if ($null -eq $existingBinding) {
@@ -858,7 +829,51 @@ function New-DNNSite {
     If specified, the Portal Alias table will be updated to replace the old site domain with the new site domain
 .PARAMETER GitRepository
     If specified, the git repository at the given URL/path will be cloned into the site's folder
+.PARAMETER Interactive
+    Whether the cmdlet can prompt the user for additional information (e.g. how to rename additional portal aliases)
 #>
+}
+
+function readPortalAlias($alias) {
+  if ($alias -Like '*/*') {
+    $split = $alias.Split('/');
+    $aliasHost = $split[0];
+    $childAlias = $split[1..($split.length - 1)] -join '/';
+  }
+  else {
+    $aliasHost = $alias;
+    $childAlias = $null;
+  }
+
+  if ($aliasHost -Like '*:*') {
+    $split = $aliasHost.Split(':');
+    $aliasHost = $split[0];
+    $port = $split[1];
+  }
+  else {
+    $port = 80;
+  }
+  return [pscustomobject]@{host = $aliasHost; port = $port; childAlias = $childAlias };
+}
+
+function renameAlias([string]$Domain, [string]$Name, [string]$Alias, [string]$NameExtension) {
+  $newAlias = $Alias -replace $Domain, $Name;
+  $aliasInfo = readPortalAlias($newAlias);
+  $aliasHost = $aliasInfo.host;
+
+  if ($aliasHost -NotLike "*$Name*") {
+    $aliasHost = $aliasHost + $NameExtension;
+    $newAlias = $aliasHost;
+    if ($aliasInfo.port -ne 80) {
+      $newAlias = $newAlias + ':' + $aliasInfo.port;
+    }
+
+    if ($aliasInfo.childAlias) {
+      $newAlias = $newAlias + '/' + $aliasInfo.childAlias;
+    }
+  }
+
+  return $newAlias;
 }
 
 function getPackageName([System.Version]$Version, [DnnProduct]$Product) {

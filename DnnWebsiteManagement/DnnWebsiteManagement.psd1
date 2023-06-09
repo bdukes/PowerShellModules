@@ -12,7 +12,7 @@
     RootModule        = 'DnnWebsiteManagement.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.7.1'
+    ModuleVersion     = '1.8.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -56,6 +56,7 @@
         @{ ModuleName = 'SslWebBinding'; ModuleVersion = '1.3.0'; GUID = 'd8b5b233-6f01-4ade-b771-147cc9101072' },
         @{ ModuleName = 'Write-HtmlNode'; ModuleVersion = '2.0.1'; GUID = '941aad91-17a6-43a5-bb1c-cce8526d7b3e' },
         @{ ModuleName = 'ACL-Permissions'; ModuleVersion = '1.1.0'; GUID = '908787a0-5a50-43c8-816a-7fa411b4e562' },
+        @{ ModuleName = 'Read-Choice'; ModuleVersion = '1.0.2'; GUID = 'ebab63fa-f63d-427a-99c8-8450974b257c' },
         @{ ModuleName = 'SqlServer'; ModuleVersion = '21.1.18256' },
         @{ ModuleName = 'IISAdministration'; ModuleVersion = '1.1.0.0' } )
 
