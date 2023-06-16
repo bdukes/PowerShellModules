@@ -1,6 +1,8 @@
 # Change Log
 
 - June 2023
+  - DnnWebsiteManagement 2.0.0
+    - Remove ability to automagically look up a DNN install package on disk. Removes `-Version`, `-IncludeSource` and `-Product` parameters.
   - DnnWebsiteManagement 1.8.0
     - Allow interactively choosing new portal aliases during restore ([#24](https://github.com/bdukes/PowerShellModules/pull/24), thanks [@engage-chancock](https://github.com/engage-chancock)!)
     - Allow passing a zipped backup

@@ -2,32 +2,11 @@
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration, Read-Choice
 Set-StrictMode -Version:Latest
 
-$defaultDNNVersion = $env:DnnWebsiteManagement_DefaultVersion
-if ($null -eq $defaultDNNVersion) { $defaultDNNVersion = '9.10.2' }
-
-$defaultIncludeSource = $env:DnnWebsiteManagement_DefaultIncludeSource
-if ($defaultIncludeSource -eq 'false') { $defaultIncludeSource = $false }
-elseif ($defaultIncludeSource -eq 'no') { $defaultIncludeSource = $false }
-elseif ($defaultIncludeSource -eq '0') { $defaultIncludeSource = $false }
-elseif ($defaultIncludeSource -eq '') { $defaultIncludeSource = $false }
-elseif ($null -eq $defaultIncludeSource) { $defaultIncludeSource = $false }
-else { $defaultIncludeSource = $true }
-
 $www = $env:www
 if ($null -eq $www) {
   $inetpub = Join-Path 'C:' -ChildPath:'inetpub';
   $www = Join-Path $inetpub 'wwwroot';
 }
-
-Add-Type -TypeDefinition @"
-   public enum DnnProduct
-   {
-      DnnPlatform,
-      EvoqContent,
-      EvoqContentEnterprise,
-      EvoqEngage,
-   }
-"@
 
 function Install-DNNResource {
   [Alias("Install-DNNResources")]
@@ -351,16 +330,9 @@ function Restore-DNNSite {
     [ValidateScript({ if (Test-Path -Path:$_ -PathType:Leaf) { $true; } else { throw "$_ file not found" } })]
     [string]$DatabaseBackupPath,
 
-    [Alias("sourceVersion")]
-    [parameter(Mandatory = $false)]
-    [string]$Version = '',
-
     [Alias("oldDomain")]
     [parameter(Mandatory = $false)]
     [string]$Domain = '',
-
-    [parameter(Mandatory = $false)]
-    [switch]$IncludeSource = $defaultIncludeSource,
 
     [parameter(Mandatory = $false)]
     [string]$GitRepository = '',
@@ -386,8 +358,7 @@ function Restore-DNNSite {
     }
   }
 
-  $IncludeSource = $IncludeSource -or $Version -ne ''
-  New-DNNSite $Name -SiteZipPath:$SiteZipPath -DatabaseBackupPath:$DatabaseBackupPath -Version:$Version -IncludeSource:$IncludeSource -Domain:$Domain -GitRepository:$GitRepository -Interactive:$Interactive;
+  New-DNNSite $Name -SiteZipPath:$SiteZipPath -DatabaseBackupPath:$DatabaseBackupPath -Domain:$Domain -GitRepository:$GitRepository -Interactive:$Interactive;
 
   $sitePath = Join-Path $www $Name;
   $scriptsDir = Join-Path $sitePath '.dnn-website-management';
@@ -413,20 +384,11 @@ function Restore-DNNSite {
     elseif ($restoreCmd.Parameters.ContainsKey('databaseBackup')) {
       $restoreArgs['databaseBackup'] = $DatabaseBackupPath;
     }
-    if ($restoreCmd.Parameters.ContainsKey('Version')) {
-      $restoreArgs['Version'] = $Version;
-    }
-    elseif ($restoreCmd.Parameters.ContainsKey('sourceVersion')) {
-      $restoreArgs['sourceVersion'] = $Version;
-    }
     if ($restoreCmd.Parameters.ContainsKey('Domain')) {
       $restoreArgs['Domain'] = $Domain;
     }
     elseif ($restoreCmd.Parameters.ContainsKey('oldDomain')) {
       $restoreArgs['oldDomain'] = $Domain;
-    }
-    if ($restoreCmd.Parameters.ContainsKey('IncludeSource')) {
-      $restoreArgs['IncludeSource'] = $IncludeSource;
     }
     if ($restoreCmd.Parameters.ContainsKey('GitRepository')) {
       $restoreArgs['GitRepository'] = $GitRepository;
@@ -461,8 +423,6 @@ function Restore-DNNSite {
     The full path to the zip (any format that 7-Zip can expand) of the site's file system, or the full path to a folder with the site's contents
 .PARAMETER DatabaseBackupPath
     The full path to the database backup (.bak file).  This must be in a location to which SQL Server has access
-.PARAMETER Version
-    If specified, the DNN source for this version will be included with the site
 .PARAMETER Domain
     If specified, the Portal Alias table will be updated to replace the old site domain with the new site domain
 .PARAMETER GitRepository
@@ -480,17 +440,12 @@ function Update-DNNSite {
     [parameter(Mandatory = $true, position = 0)]
     [string]$Name,
 
-    [parameter(Mandatory = $false, position = 1)]
-    [string]$Version = $defaultDNNVersion,
-
-    [parameter(Mandatory = $false, position = 2)]
-    [DnnProduct]$Product = [DnnProduct]::DnnPlatform,
-
-    [switch]$IncludeSource = $defaultIncludeSource
+    [parameter(Mandatory = $true, position = 1)]
+    [string]$SiteZipPath
   );
   try {
-    if ($PSCmdlet.ShouldProcess($Name, "Extract $Version upgrade package")) {
-      extractPackages -Name:$Name -Version:$Version -Product:$Product -IncludeSource:$IncludeSource -UseUpgradePackage -ErrorAction Stop;
+    if ($PSCmdlet.ShouldProcess($SiteZipPath, "Extract upgrade package")) {
+      extractPackages -Name:$Name -SiteZipPath:$SiteZipPath -ErrorAction Stop;
     }
   }
   catch {
@@ -510,15 +465,11 @@ function Update-DNNSite {
 .SYNOPSIS
     Upgrades a DNN site
 .DESCRIPTION
-    Upgrades an existing DNN site to the specified version
+    Upgrades an existing DNN site using the specified upgrade package
 .PARAMETER Name
     The name of the site (the domain, folder name, and database name, e.g. dnn.local)
-.PARAMETER Version
-    The version of DNN to which the site should be upgraded.  Defaults to $defaultDNNVersion
-.PARAMETER Product
-    The DNN product for the upgrade package.  Defaults to DnnPlatform
-.PARAMETER IncludeSource
-    Whether to include the DNN source
+.PARAMETER SiteZipPath
+    The path to the upgrade package zip.
 #>
 }
 
@@ -529,20 +480,13 @@ function New-DNNSite {
     [parameter(Mandatory = $true, position = 0)]
     [string]$Name,
 
-    [parameter(Mandatory = $false, position = 1)]
-    [string]$Version = $defaultDNNVersion,
-
-    [parameter(Mandatory = $false, position = 2)]
-    [DnnProduct]$Product = [DnnProduct]::DnnPlatform,
-
-    [switch]$IncludeSource = $defaultIncludeSource,
+    [Alias("siteZip")]
+    [parameter(Mandatory = $true, position = 1)]
+    [string]$SiteZipPath,
 
     [string]$ObjectQualifier = '',
 
     [string]$DatabaseOwner = 'dbo',
-
-    [Alias("siteZip")]
-    [string]$SiteZipPath = '',
 
     [Alias("databaseBackup")]
     [string]$DatabaseBackupPath = '',
@@ -562,7 +506,7 @@ function New-DNNSite {
 
   if ($PSCmdlet.ShouldProcess($Name, 'Extract Package')) {
     try {
-      extractPackages -Name:$Name -Version:$Version -Product:$Product -IncludeSource:$IncludeSource -SiteZip:$SiteZipPath -ErrorAction Stop;
+      extractPackages -Name:$Name -SiteZip:$SiteZipPath -ErrorAction Stop;
     }
     catch {
       $PSCmdlet.ThrowTerminatingError($_);
@@ -826,20 +770,14 @@ function New-DNNSite {
     Creates a DNN site, either from a file system zip and database backup, or a new installation
 .PARAMETER Name
     The name of the site (the domain, folder name, and database name, e.g. dnn.local)
-.PARAMETER Version
-    The DNN version  Defaults to $defaultDnnVersion
-.PARAMETER Product
-    The DNN product.  Defaults to DnnPlatform
-.PARAMETER IncludeSource
-    Whether to include the DNN source files
+.PARAMETER SiteZipPath
+    The full path to the DNN site zip file or directory
 .PARAMETER ObjectQualifier
     The database object qualifier
 .PARAMETER DatabaseOwner
     The database schema
 .PARAMETER DatabaseBackupPath
     The full path to the database backup (.bak file).  This must be in a location to which SQL Server has access
-.PARAMETER Version
-    If specified, the DNN source for this version will be included with the site
 .PARAMETER Domain
     If specified, the Portal Alias table will be updated to replace the old site domain with the new site domain
 .PARAMETER GitRepository
@@ -889,67 +827,6 @@ function renameAlias([string]$Domain, [string]$Name, [string]$Alias, [string]$Na
   }
 
   return $newAlias;
-}
-
-function getPackageName([System.Version]$Version, [DnnProduct]$Product) {
-  $72version = New-Object System.Version("7.2")
-  $74version = New-Object System.Version("7.4")
-  if ($Version -lt $72version) {
-    $ProductPackageNames = @{
-      [DnnProduct]::DnnPlatform           = "DotNetNuke_Community"
-      [DnnProduct]::EvoqContent           = "DotNetNuke_Professional"
-      [DnnProduct]::EvoqContentEnterprise = "DotNetNuke_Enterprise"
-      [DnnProduct]::EvoqEngage            = "Evoq_Social"
-    }
-  }
-  elseif ($Version -lt $74version) {
-    $ProductPackageNames = @{
-      [DnnProduct]::DnnPlatform           = "DNN_Platform"
-      [DnnProduct]::EvoqContent           = "Evoq_Content"
-      [DnnProduct]::EvoqContentEnterprise = "Evoq_Enterprise"
-      [DnnProduct]::EvoqEngage            = "Evoq_Social"
-    }
-  }
-  else {
-    $ProductPackageNames = @{
-      [DnnProduct]::DnnPlatform           = "DNN_Platform"
-      [DnnProduct]::EvoqContent           = "Evoq_Content_Basic"
-      [DnnProduct]::EvoqContentEnterprise = "Evoq_Content"
-      [DnnProduct]::EvoqEngage            = "Evoq_Engage"
-    }
-  }
-  return $ProductPackageNames.Get_Item($Product)
-}
-
-function findPackagePath([System.Version]$Version, [DnnProduct]$Product, [string]$type) {
-  $dnnSoftRoot = Join-Path $env:soft 'DNN';
-  $packagesRoot = Join-Path $dnnSoftRoot 'Versions';
-  $majorVersion = $Version.Major
-  switch ($Product) {
-    DnnPlatform { $packagesFolder = (Join-Path $packagesRoot "DotNetNuke $majorVersion"); break; }
-    EvoqContent { $packagesFolder = (Join-Path $packagesRoot "Evoq Content Basic"); break; }
-    EvoqContentEnterprise { $packagesFolder = (Join-Path $packagesRoot "Evoq Content"); break; }
-    EvoqEngage { $packagesFolder = (Join-Path $packagesRoot "Evoq Engage"); break; }
-  }
-
-  $packageName = getPackageName $Version $Product
-
-  $formattedVersion = $Version.Major.ToString('0') + '.' + $Version.Minor.ToString('0') + '.' + $Version.Build.ToString('0')
-  $package = Join-Path $packagesFolder "${packageName}_${formattedVersion}*_${type}.zip" -Resolve | Get-Item;
-  if ($null -eq $package) {
-    $formattedVersion = $Version.Major.ToString('0#') + '.' + $Version.Minor.ToString('0#') + '.' + $Version.Build.ToString('0#')
-    $package = Join-Path $packagesFolder "${packageName}_${formattedVersion}*_${type}.zip" -Resolve | Get-Item;
-  }
-
-  if (($null -eq $package) -and ($Product -ne [DnnProduct]::DnnPlatform)) {
-    return findPackagePath -Version:$Version -Product:DnnPlatform -type:$type
-  }
-  elseif ($null -eq $package) {
-    return $null
-  }
-  else {
-    return $package.FullName
-  }
 }
 
 function extractZip {
@@ -1021,13 +898,8 @@ function extractPackages {
   param(
     [parameter(Mandatory = $true, position = 0)]
     [string]$Name,
-    [parameter(Mandatory = $false, position = 1)]
-    [string]$Version,
-    [parameter(Mandatory = $true, position = 2)]
-    [DnnProduct]$Product = [DnnProduct]::DnnPlatform,
-    [switch]$IncludeSource = $defaultIncludeSource,
-    [string]$SiteZipPath = '',
-    [switch]$useUpgradePackage
+    [parameter(Mandatory = $true, position = 1)]
+    [string]$SiteZipPath
   );
 
   $SiteZipOutputPath = $null;
@@ -1062,85 +934,14 @@ function extractPackages {
         }
       }
     }
-
-    $Version = [Reflection.AssemblyName]::GetAssemblyName($assemblyPath).Version
-    Write-Verbose "Found version $Version of DotNetNuke.dll"
-  }
-  elseif ($null -eq $env:soft) {
-    throw 'You must set the environment variable `soft` to the path that contains your DNN install packages'
   }
 
-  if ($Version -eq '') {
-    $Version = $defaultDNNVersion
-  }
-
-  $Version = New-Object System.Version($Version)
-  Write-Verbose "Version is $Version"
-
-  if ($IncludeSource -eq $true) {
-    Write-Information "Extracting DNN $Version source"
-    $sourcePath = findPackagePath -Version:$Version -Product:$Product -type:'Source'
-    Write-Verbose "Source Path is $sourcePath"
-    if ($null -eq $sourcePath -or $sourcePath -eq '' -or -not (Test-Path $sourcePath)) {
-      Write-Error "Fallback source package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Extract DNN $Version source" -CategoryTargetName:$sourcePath -TargetObject:$sourcePath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
-    }
-
-    $sitePath = Join-Path $www $Name;
-    Write-Verbose "extracting from $sourcePath to $sitePath"
-    extractZip $sitePath "$sourcePath"
-    $platformPath = Join-Path $sitePath "Platform";
-    if (Test-Path (Join-Path $platformPath "Website") -PathType Container) {
-      Copy-Item "$platformPath/*" $sitePath -Force -Recurse
-      Remove-Item $platformPath -Force -Recurse
-    }
-
-    Write-Information "Copying DNN $Version source symbols into install directory"
-    $symbolsPath = findPackagePath -Version:$Version -Product:$Product -type:'Symbols'
-    Write-Verbose "Symbols Path is $sourcePath"
-    if ($null -eq $symbolsPath -or $symbolsPath -eq '' -or -not (Test-Path $symbolsPath)) {
-      Write-Error "Fallback symbols package does not exist, either" -Category:ObjectNotFound -CategoryActivity:"Copy DNN $Version source symbols" -CategoryTargetName:$symbolsPath -TargetObject:$symbolsPath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
-    }
-
-    $websitePath = Join-Path $sitePath 'Website';
-    $installPath = Join-Path $websitePath 'Install';
-    $moduleInstallPath = Join-Path $installPath 'Module';
-    Write-Verbose "cp $symbolsPath $moduleInstallPath"
-    Copy-Item $symbolsPath $moduleInstallPath
-
-    Write-Information "Updating site URL in sln files"
-    Get-ChildItem -Path:$sitePath -Include:'*.sln' | ForEach-Object {
-      $slnContent = (Get-Content $_);
-      $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Community"', "`"https://$Name`"";
-      $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Professional"', "`"https://$Name`"";
-      $slnContent = $slnContent -replace '"http://localhost/DotNetNuke_Enterprise"', "`"https://$Name`"";
-      $slnContent = $slnContent -replace '"http://localhost/DNN_Platform"', "`"https://$Name`""; # DNN 7.1.2+
-      Set-Content $_ $slnContent;
-    }
-  }
-
-  if ($SiteZipPath -eq '') {
-    if ($useUpgradePackage) {
-      $SiteZipPath = findPackagePath -Version:$Version -Product:$Product -type:'Upgrade'
-    }
-    else {
-      $SiteZipPath = findPackagePath -Version:$Version -Product:$Product -type:'Install'
-    }
-
-    if ($null -eq $SiteZipPath -or $SiteZipPath -eq '' -or -not (Test-Path $SiteZipPath)) {
-      throw "The package for $Product $Version could not be found, aborting installation"
-    }
-  }
-  elseif ($null -eq $SiteZipPath -or $SiteZipPath -eq '' -or -not (Test-Path $SiteZipPath)) {
+  if ($null -eq $SiteZipPath -or $SiteZipPath -eq '' -or -not (Test-Path $SiteZipPath)) {
     throw "The supplied file $SiteZipPath could not be found, aborting installation"
   }
 
   $SiteZipPath = (Get-Item $SiteZipPath).FullName
   Write-Information "Extracting DNN site"
-  if (-not (Test-Path $SiteZipPath)) {
-    Write-Error "Site package does not exist" -Category:ObjectNotFound -CategoryActivity:"Extract DNN site" -CategoryTargetName:$SiteZipPath -TargetObject:$SiteZipPath -CategoryTargetType:".zip file" -CategoryReason:"File does not exist"
-    Break
-  }
-
   if (Test-Path $SiteZipPath -PathType Leaf) {
     $SiteZipOutputPath = Join-Path $sitePath  "Extracted_Website"
     extractZip $SiteZipOutputPath $SiteZipPath
