@@ -62,28 +62,27 @@ function Remove-DNNSite {
 
   Assert-AdministratorRole
 
-  #TODO: remove certificate
-  if ($PSCmdlet.ShouldProcess($Name, 'Remove HTTPS Binding')) {
-    Remove-SslWebBinding $Name -Confirm:$false;
-  }
+  $hostHeaders = [System.Collections.Generic.HashSet[string]]@($Name);
 
   $website = Get-IISSite $Name;
   if ($website) {
     foreach ($binding in $website.Bindings) {
-      if ($binding.sslFlags -eq 1) {
-        $hostHeader = $binding.bindingInformation.Substring(6) #remove "*:443:" from the beginning of the binding info
-        if ($PSCmdlet.ShouldProcess($hostHeader, 'Remove HTTPS Binding')) {
-          Remove-SslWebBinding $Name $hostHeader -Confirm:$false;
-        }
+      $hostHeader = $binding.bindingInformation.Substring(6) #remove "*:443:" from the beginning of the binding info
+      $hostHeaders.Add($hostHeader);
+    }
+
+    foreach ($hostHeader in $hostHeaders) {
+      if ($PSCmdlet.ShouldProcess($hostHeader, 'Remove HTTPS Binding')) {
+        Remove-SslWebBinding $Name $hostHeader -Confirm:$false -ErrorAction:SilentlyContinue;
       }
     }
 
     if ($PSCmdlet.ShouldProcess($Name, 'Remove IIS Site')) {
-      Remove-IISSite $Name -WhatIf:$WhatIfPreference -Confirm:$false;
+      Remove-IISSite $Name -WhatIf:$WhatIfPreference -Confirm:$false -ErrorAction:SilentlyContinue;
     }
   }
 
-  $serverManager = Get-IISServerManager
+  $serverManager = Get-IISServerManager;
   $appPool = $serverManager.ApplicationPools[$Name];
   if ($appPool) {
     Write-Information "Removing $Name app pool from IIS"
@@ -134,9 +133,10 @@ function Remove-DNNSite {
     Write-Information "$loginName database login not found"
   }
 
-  #TODO: remove all host entries added during restore
-  if ($PSCmdlet.ShouldProcess($Name, 'Remove HOSTS file entry')) {
-    Remove-HostFileEntry $Name -WhatIf:$WhatIfPreference -Confirm:$false;
+  foreach ($hostHeader in $hostHeaders) {
+    if ($PSCmdlet.ShouldProcess($hostHeader, 'Remove HOSTS file entry')) {
+      Remove-HostFileEntry $hostHeader -WhatIf:$WhatIfPreference -Confirm:$false -ErrorAction:SilentlyContinue;
+    }
   }
 
   <#

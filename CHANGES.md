@@ -1,8 +1,11 @@
 # Change Log
 
 - June 2023
+  - SslWebBinding 1.4.0
+    - Remove certificate when removing IIS binding.
   - DnnWebsiteManagement 2.0.0
     - Remove ability to automagically look up a DNN install package on disk. Removes `-Version`, `-IncludeSource` and `-Product` parameters.
+    - Remove host headers and certificates when removing a site.
   - DnnWebsiteManagement 1.8.0
     - Allow interactively choosing new portal aliases during restore ([#24](https://github.com/bdukes/PowerShellModules/pull/24), thanks [@engage-chancock](https://github.com/engage-chancock)!)
     - Allow passing a zipped backup

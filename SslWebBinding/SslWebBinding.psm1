@@ -113,7 +113,12 @@ function Remove-SslWebBinding {
   }
 
   foreach ($existingBinding in @($hostHeader | Foreach-Object { Get-IISSiteBinding -Name:$siteName -Protocol:https } | Where-Object { getHostHeader($_.BindingInformation) -eq $_ })) {
-    if ($PSCmdlet.ShouldProcess($existingBinding.BindingInformation)) {
+    $certHash = $existingBinding['certificateHash'];
+    $cert = Get-Item Cert:\LocalMachine\My\$certHash -ErrorAction SilentlyContinue;
+    if ($cert -and $PSCmdlet.ShouldProcess($cert.Subject, 'Remove Certificate')) {
+      Remove-Item Cert:\LocalMachine\My\$certHash;
+    }
+    if ($PSCmdlet.ShouldProcess($existingBinding.BindingInformation, 'Remove Binding')) {
       Remove-IISSiteBinding -Name:$siteName -BindingInformation:$existingBinding.BindingInformation -Protocol:https -ErrorAction:Continue -Confirm:$false;
     }
   }
