@@ -910,9 +910,16 @@ function extractPackages {
   $sitePath = Join-Path $www $Name;
   if ($SiteZipPath -ne '') {
     if (Test-Path $SiteZipPath -PathType Leaf) {
-      $SiteZipOutputPath = Join-Path $sitePath 'Extracted_Website';
+      if (Test-Path $sitePath -PathType Container) {
+        $SiteZipOutputPath = Join-Path $sitePath 'Extracted_Website';
+      }
+      else {
+        $SiteZipOutputPath = Join-Path $sitePath 'Website';
+      }
+
       extractZip $SiteZipOutputPath $SiteZipPath;
       $SiteZipPath = $SiteZipOutputPath
+
       $unzippedFiles = @(Get-ChildItem $SiteZipOutputPath -Directory)
       if ($unzippedFiles.Length -eq 1) {
         Write-Verbose "Found a single folder in the zip, assuming it's the entire website"
@@ -927,7 +934,7 @@ function extractPackages {
       $binPath = Join-Path $websitePath 'bin';
       $assemblyPath = Join-Path $binPath 'DotNetNuke.dll';
       if (Test-Path $assemblyPath) {
-        $CopyEntireDirectory = Test-Path (Join-Path $SiteZipPath .gitignore);
+        $CopyEntireDirectory = Test-Path (Join-Path $SiteZipPath '.gitignore');
         if (-not $CopyEntireDirectory) {
           $SiteZipPath = Join-Path $SiteZipPath "Website"
           Write-Verbose "Found a Website folder, adjusting path"
@@ -946,9 +953,19 @@ function extractPackages {
   $SiteZipPath = (Get-Item $SiteZipPath).FullName
   Write-Information "Extracting DNN site"
   if (Test-Path $SiteZipPath -PathType Leaf) {
-    $SiteZipOutputPath = Join-Path $sitePath  "Extracted_Website"
+    if (Test-Path $sitePath -PathType Container) {
+      $SiteZipOutputPath = Join-Path $sitePath 'Extracted_Website';
+    }
+    else {
+      $SiteZipOutputPath = Join-Path $sitePath 'Website';
+    }
+
     extractZip $SiteZipOutputPath $SiteZipPath
     $SiteZipPath = $SiteZipOutputPath
+  }
+
+  if ($SiteZipPath -eq $sitePath -or $SiteZipPath -eq (Join-Path $sitePath 'Website')) {
+    return;
   }
 
   if ($CopyEntireDirectory) {
