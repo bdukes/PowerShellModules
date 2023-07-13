@@ -1,5 +1,10 @@
 # Change Log
 
+- Julu 2023
+  - DnnWebsiteManagement 2.0.1
+    - Fix extraneous output from `Remove-DNNSite`
+    - Allow passing path to `Remove-DNNSite`
+    - Remove unnecessary file copy for typical `New-DNNSite` and `Restore-DNNSite` usage
 - June 2023
   - SslWebBinding 1.4.0
     - Remove certificate when removing IIS binding.
