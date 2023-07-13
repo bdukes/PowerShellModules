@@ -62,6 +62,10 @@ function Remove-DNNSite {
 
   Assert-AdministratorRole
 
+  # Allow passing in a path, rather than a name
+  $sitePath = Join-Path $www $Name;
+  $Name = Split-Path -Path $sitePath -Leaf;
+
   $hostHeaders = [System.Collections.Generic.HashSet[string]]@($Name);
 
   $website = Get-IISSite $Name;
@@ -96,7 +100,6 @@ function Remove-DNNSite {
     Write-Information "$Name app pool not found in IIS"
   }
 
-  $sitePath = Join-Path $www $Name;
   if (Test-Path $sitePath) {
     if ($PSCmdlet.ShouldProcess($sitePath, "Remove website folder")) {
       Remove-Item $sitePath -Recurse -Force -WhatIf:$WhatIfPreference -Confirm:$false;
