@@ -68,7 +68,7 @@ function Remove-DNNSite {
   if ($website) {
     foreach ($binding in $website.Bindings) {
       $hostHeader = $binding.bindingInformation.Substring(6) #remove "*:443:" from the beginning of the binding info
-      $hostHeaders.Add($hostHeader);
+      $hostHeaders.Add($hostHeader) | Out-Null;
     }
 
     foreach ($hostHeader in $hostHeaders) {
