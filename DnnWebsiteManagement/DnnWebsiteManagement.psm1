@@ -1011,7 +1011,8 @@ function processFilesWithProgress($from, $to, [scriptblock]$process, $activity, 
   Write-Progress -Activity:$activity -Status:$status -PercentComplete 0;
   foreach ($file in $filesToCopy) {
     $progressCount += 1;
-    $destination = $file.FullName -replace [regex]::escape($from), $to;
+    $relativePath = $file.FullName -replace [regex]::escape($from), '';
+    $destination = Join-Path $to $relativePath;
     Write-Progress -Activity:$activity -Status:$status -PercentComplete ($progressCount / $totalCount * 100) -CurrentOperation:$destination;
     $directory = Split-Path $destination;
     $baseDirectory = Split-Path $directory;
