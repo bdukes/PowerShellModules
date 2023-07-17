@@ -1,6 +1,8 @@
 # Change Log
 
-- Julu 2023
+- July 2023
+  - DnnWebsiteManagement 2.0.2
+    - Fix path issues when copying site from directory instead of zip
   - DnnWebsiteManagement 2.0.1
     - Fix extraneous output from `Remove-DNNSite`
     - Allow passing path to `Remove-DNNSite`
