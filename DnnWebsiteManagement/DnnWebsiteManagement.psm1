@@ -577,7 +577,7 @@ function New-DNNSite {
         $aliasCount = $aliases.Count
         $ProcessManual = $false
 
-        if ($Interactive.IsPresent) {
+        if ($Interactive.IsPresent -and $aliasCount -gt 0) {
           $ProcessManual = Read-BooleanChoice -caption:'Manually Rename Portal Aliases' -message:"Would you like to specify new HTTP aliases for all $aliasCount aliases?" -defaultChoice:$true
         }
 
