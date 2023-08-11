@@ -1,4 +1,4 @@
-﻿#Requires -Version 3
+#Requires -Version 3
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration, Read-Choice
 Set-StrictMode -Version:Latest
 
@@ -572,7 +572,7 @@ function New-DNNSite {
         invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = REPLACE(SettingValue, '$Domain', '$Name') WHERE SettingName = 'DefaultPortalAlias'" -Database:$Name
       }
 
-      $aliases = invokeSql -Query:"SELECT PortalID, HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE HTTPAlias != '$Name' ORDER BY PortalID, HTTPAlias" -Database:$Name
+      $aliases = @(invokeSql -Query:"SELECT PortalID, HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE HTTPAlias != '$Name' ORDER BY PortalID, HTTPAlias" -Database:$Name);
       if ($Domain -ne '') {
         $aliasCount = $aliases.Count
         $ProcessManual = $false
