@@ -1,4 +1,4 @@
-#Requires -Version 3
+﻿#Requires -Version 3
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration, Read-Choice
 Set-StrictMode -Version:Latest
 
@@ -726,13 +726,18 @@ function New-DNNSite {
     $webConfig.Save($webConfigPath)
   }
 
+  $systemWebSection = $webConfig.configuration['system.web'];
+  if (-not $systemWebSection) {
+    $systemWebSection = $webConfig.configuration.location['system.web'];
+  }
+
   if ($PSCmdlet.ShouldProcess($webConfigPath, 'Update web.config to allow short passwords')) {
-    $webConfig.configuration['system.web'].membership.providers.add | Where-Object { $_.type -eq 'System.Web.Security.SqlMembershipProvider' } | ForEach-Object { $_.minRequiredPasswordLength = '4' }
+    $systemWebSection.membership.providers.add | Where-Object { $_.type -eq 'System.Web.Security.SqlMembershipProvider' } | ForEach-Object { $_.minRequiredPasswordLength = '4' }
     $webConfig.Save($webConfigPath)
   }
 
   if ($PSCmdlet.ShouldProcess($webConfigPath, 'Turn on debug mode in web.config')) {
-    $webConfig.configuration['system.web'].compilation.debug = 'true'
+    $systemWebSection.compilation.debug = 'true'
     $webConfig.Save($webConfigPath)
   }
 
