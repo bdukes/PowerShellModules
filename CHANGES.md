@@ -1,5 +1,10 @@
 # Change Log
 
+- August 2023
+  - DnnWebsiteManagement 2.0.3
+    - Fix error when site has no custom aliases to rename
+    - Fix error when web.config has a `<location>` element around `<system.web>`
+    - Fix prompt about renaming aliases when there are no aliases to rename
 - July 2023
   - DnnWebsiteManagement 2.0.2
     - Fix path issues when copying site from directory instead of zip
