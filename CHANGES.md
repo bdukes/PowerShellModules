@@ -1,5 +1,8 @@
 # Change Log
 
+- October 2023
+  - DnnWebsiteManagement 2.0.4
+    - Fix error when extracting a site with a nested folder in the zip, the site gets deleted after extracting
 - August 2023
   - DnnWebsiteManagement 2.0.3
     - Fix error when site has no custom aliases to rename

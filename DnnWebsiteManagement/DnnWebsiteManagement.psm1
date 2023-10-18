@@ -913,13 +913,15 @@ function extractPackages {
   $SiteZipOutputPath = $null;
   $CopyEntireDirectory = $false;
   $sitePath = Join-Path $www $Name;
+  $websitePath = Join-Path $sitePath 'Website';
+  $websiteExtractPath = Join-Path $sitePath 'Extracted_Website';
   if ($SiteZipPath -ne '') {
     if (Test-Path $SiteZipPath -PathType Leaf) {
       if (Test-Path $sitePath -PathType Container) {
-        $SiteZipOutputPath = Join-Path $sitePath 'Extracted_Website';
+        $SiteZipOutputPath = $websiteExtractPath;
       }
       else {
-        $SiteZipOutputPath = Join-Path $sitePath 'Website';
+        $SiteZipOutputPath = $websitePath;
       }
 
       extractZip $SiteZipOutputPath $SiteZipPath;
@@ -959,17 +961,17 @@ function extractPackages {
   Write-Information "Extracting DNN site"
   if (Test-Path $SiteZipPath -PathType Leaf) {
     if (Test-Path $sitePath -PathType Container) {
-      $SiteZipOutputPath = Join-Path $sitePath 'Extracted_Website';
+      $SiteZipOutputPath = $websiteExtractPath;
     }
     else {
-      $SiteZipOutputPath = Join-Path $sitePath 'Website';
+      $SiteZipOutputPath = $websitePath;
     }
 
     extractZip $SiteZipOutputPath $SiteZipPath
     $SiteZipPath = $SiteZipOutputPath
   }
 
-  if ($SiteZipPath -eq $sitePath -or $SiteZipPath -eq (Join-Path $sitePath 'Website')) {
+  if ($SiteZipPath -eq $sitePath -or $SiteZipPath -eq $websitePath) {
     return;
   }
 
@@ -977,14 +979,14 @@ function extractPackages {
     $to = $sitePath
   }
   else {
-    $to = Join-Path $sitePath "Website"
+    $to = $websitePath
   }
   $from = $SiteZipPath
 
 
   if ($SiteZipOutputPath) {
     moveWithProgress -from:$from -to:$to;
-    Remove-Item $SiteZipOutputPath -Force -Recurse -Confirm:$false;
+    Remove-Item $from -Force -Recurse -Confirm:$false;
   }
   else {
     copyWithProgress -from:$from -to:$to;
