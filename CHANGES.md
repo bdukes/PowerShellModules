@@ -1,5 +1,8 @@
 # Change Log
 
+- October 2024
+  - DnnWebsiteManagement 2.0.5
+    - Ensure DNN site's application pool is using .NET Framework
 - October 2023
   - DnnWebsiteManagement 2.0.4
     - Fix error when extracting a site with a nested folder in the zip, the site gets deleted after extracting
