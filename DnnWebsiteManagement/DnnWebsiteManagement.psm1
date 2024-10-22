@@ -522,7 +522,9 @@ function New-DNNSite {
 
   $serverManager = Get-IISServerManager;
   if ($PSCmdlet.ShouldProcess($Name, 'Create IIS App Pool')) {
-    $serverManager.ApplicationPools.Add($Name);
+    $appPool = $serverManager.ApplicationPools.Add($Name);
+    $appPool.ManagedPipelineMode = 'Integrated';
+    $appPool.ManagedRuntimeVersion = 'v4.0';
     $serverManager.CommitChanges();
   }
 
