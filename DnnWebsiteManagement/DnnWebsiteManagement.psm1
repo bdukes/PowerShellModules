@@ -917,6 +917,8 @@ function extractPackages {
   $sitePath = Join-Path $www $Name;
   $websitePath = Join-Path $sitePath 'Website';
   $websiteExtractPath = Join-Path $sitePath 'Extracted_Website';
+
+  $SiteZipPath = $SiteZipPath.Trim("/\");
   if ($SiteZipPath -ne '') {
     if (Test-Path $SiteZipPath -PathType Leaf) {
       if (Test-Path $sitePath -PathType Container) {
