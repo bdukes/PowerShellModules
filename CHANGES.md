@@ -1,8 +1,5 @@
 # Change Log
 
-- January 2025
-  - DnnWebsiteManagement 2.0.6
-    - FIx error when path has trailing slash, thanks ([#30](https://github.com/bdukes/PowerShellModules/pull/30), [@DanielBolef](https://github.com/DanielBolef)!)
 - October 2024
   - DnnWebsiteManagement 2.0.5
     - Ensure DNN site's application pool is using .NET Framework

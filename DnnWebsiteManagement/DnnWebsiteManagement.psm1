@@ -2,28 +2,11 @@
 #Requires -Modules Add-HostFileEntry, AdministratorRole, PKI, SslWebBinding, SqlServer, IISAdministration, Read-Choice
 Set-StrictMode -Version:Latest
 
-$www = $env:www;
+$www = $env:www
 if ($null -eq $www) {
   $inetpub = Join-Path 'C:' -ChildPath:'inetpub';
   $www = Join-Path $inetpub 'wwwroot';
 }
-
-$dnn_sql_server = $env:dnn_sql_server;
-if ($null -eq $dnn_sql_server) {
-  $dnn_sql_server = '.';
-}
-
-$dnn_sql_username = $env:dnn_sql_username;
-$dnn_sql_password = $env:dnn_sql_password;
-
-function sqldrive
-{
-    param( [string]$name, [string]$login = "MyLogin", [string]$root = "SQLSERVER:\SQL\MyComputer\MyInstance" )
-    $password = read-host -AsSecureString -Prompt "Password"
-    $cred = new-object System.Management.Automation.PSCredential -argumentlist $login,$password
-    New-PSDrive $name -PSProvider SqlServer -Root $root -Credential $cred -Scope 1
-}
-
 
 function Install-DNNResource {
   [Alias("Install-DNNResources")]
@@ -127,7 +110,7 @@ function Remove-DNNSite {
   }
 
   $sqlPath = Join-Path 'SQLSERVER:' 'SQL';
-  $localhostSqlPath = Join-Path $sqlPath $dnn_sql_server;
+  $localhostSqlPath = Join-Path $sqlPath '(local)';
   $localSqlPath = Join-Path $localhostSqlPath 'DEFAULT';
   $databasesSqlPath = Join-Path $localSqlPath 'Databases';
   $databasePath = Join-Path $databasesSqlPath (ConvertTo-EncodedSqlName $Name);
@@ -227,7 +210,7 @@ function Rename-DNNSite {
   $serverManager.CommitChanges();
 
   $sqlPath = Join-Path 'SQLSERVER:' 'SQL';
-  $localhostSqlPath = Join-Path $sqlPath $dnn_sql_server;
+  $localhostSqlPath = Join-Path $sqlPath '(local)';
   $localSqlPath = Join-Path $localhostSqlPath 'DEFAULT';
   $databasesSqlPath = Join-Path $localSqlPath 'Databases';
   $databasePath = Join-Path $databasesSqlPath (ConvertTo-EncodedSqlName $Name);
@@ -293,7 +276,7 @@ function Rename-DNNSite {
     [xml]$webConfig = Get-Content $webConfigPath
     $ObjectQualifier = $webConfig.configuration.dotnetnuke.data.providers.add.objectQualifier.TrimEnd('_')
     $DatabaseOwner = $webConfig.configuration.dotnetnuke.data.providers.add.databaseOwner.TrimEnd('.')
-    $connectionString = "Data Source=$dnn_sql_server`;Initial Catalog=$NewName`;Integrated Security=true"
+    $connectionString = "Data Source=.`;Initial Catalog=$NewName`;Integrated Security=true"
     $webConfig.configuration.connectionStrings.add | Where-Object { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $connectionString }
     $webConfig.configuration.appSettings.add | Where-Object { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }
     $webConfig.Save($webConfigPath)
@@ -647,7 +630,7 @@ function New-DNNSite {
     }
 
     $sqlPath = Join-Path 'SQLSERVER:' 'SQL';
-    $localhostSqlPath = Join-Path $sqlPath $dnn_sql_server;
+    $localhostSqlPath = Join-Path $sqlPath '(local)';
     $localSqlPath = Join-Path $localhostSqlPath 'DEFAULT';
     $databasesPath = Join-Path $localSqlPath 'Databases';
     $databasePath = Join-Path $databasesPath (ConvertTo-EncodedSqlName $Name);
@@ -734,7 +717,7 @@ function New-DNNSite {
   }
 
   if ($PSCmdlet.ShouldProcess($webConfigPath, 'Set connectionString in web.config')) {
-    $connectionString = "Data Source=$dnn_sql_server`;Initial Catalog=$Name`;Integrated Security=true"
+    $connectionString = "Data Source=.`;Initial Catalog=$Name`;Integrated Security=true"
     $webConfig.configuration.connectionStrings.add | Where-Object { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $connectionString }
     $webConfig.configuration.appSettings.add | Where-Object { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $connectionString }
     $webConfig.Save($webConfigPath)
@@ -762,7 +745,7 @@ function New-DNNSite {
 
   $loginName = "IIS AppPool\$Name";
   $sqlPath = Join-Path 'SQLSERVER:' 'SQL';
-  $localhostSqlPath = Join-Path $sqlPath $dnn_sql_server;
+  $localhostSqlPath = Join-Path $sqlPath '(local)';
   $localSqlPath = Join-Path $localhostSqlPath 'DEFAULT';
   $loginsPath = Join-Path $localSqlPath 'Logins';
   $loginPath = Join-Path $loginsPath (ConvertTo-EncodedSqlName $loginName);
@@ -1062,10 +1045,10 @@ function invokeSql {
   );
 
   if ($sqlModuleHasEncryptParam) {
-    Invoke-Sqlcmd -Query:$Query -Database:$Database -ServerInstance:$dnn_sql_server -Encrypt:Optional;
+    Invoke-Sqlcmd -Query:$Query -Database:$Database -Encrypt:Optional;
   }
   else {
-    Invoke-Sqlcmd -Query:$Query -Database:$Database -ServerInstance:$dnn_sql_server -EncryptConnection:$false;
+    Invoke-Sqlcmd -Query:$Query -Database:$Database -EncryptConnection:$false;
   }
 }
 
@@ -1119,7 +1102,7 @@ function restoreDnnDatabase {
   $logicalLogFileName = $Name;
 
   #based on http://redmondmag.com/articles/2009/12/21/automated-restores.aspx
-  $server = New-Object Microsoft.SqlServer.Management.Smo.Server($dnn_sql_server);
+  $server = New-Object Microsoft.SqlServer.Management.Smo.Server('(local)');
   $dbRestore = New-Object Microsoft.SqlServer.Management.Smo.Restore;
   $dbRestore.Devices.AddDevice($DatabaseBackupPath, [Microsoft.SqlServer.Management.Smo.DeviceType]::File)
   foreach ($file in $dbRestore.ReadFileList($server)) {
@@ -1134,7 +1117,7 @@ function restoreDnnDatabase {
   $dbRestoreLog.LogicalFileName = $logicalLogFileName;
   $dbRestoreLog.PhysicalFileName = Join-Path $server.Information.MasterDBLogPath ($Name + '_Log.ldf');
 
-  Restore-SqlDatabase -ReplaceDatabase -Database:$Name -RelocateFile:@($dbRestoreFile, $dbRestoreLog) -BackupFile:$DatabaseBackupPath -ServerInstance:$dnn_sql_server -Confirm:$false;
+  Restore-SqlDatabase -ReplaceDatabase -Database:$Name -RelocateFile:@($dbRestoreFile, $dbRestoreLog) -BackupFile:$DatabaseBackupPath -ServerInstance:'(local)' -Confirm:$false;
 }
 
 function getDnnDatabaseObjectName {
