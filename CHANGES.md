@@ -1,5 +1,7 @@
 # Change Log
 
+- DnnWebsiteManagement 2.0.8
+  - Fix incorrect original portal alias when renaming aliases
 - DnnWebsiteManagement 2.0.7
   - Fix error connecting to SQL Server
 - DnnWebsiteManagement 2.0.6
