@@ -574,12 +574,7 @@ function New-DNNSite {
     $DatabaseOwner = $webConfig.configuration.dotnetnuke.data.providers.add.databaseOwner.TrimEnd('.')
 
     if ($PSCmdlet.ShouldProcess($Name, 'Update Portal Aliases')) {
-      if ($Domain -ne '') {
-        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET HTTPAlias = REPLACE(HTTPAlias, '$Domain', '$Name')" -ConnectionString:$newConnectionString
-        invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = REPLACE(SettingValue, '$Domain', '$Name') WHERE SettingName = 'DefaultPortalAlias'" -ConnectionString:$newConnectionString
-      }
-
-      $aliases = @(invokeSql -Query:"SELECT PortalID, HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) WHERE HTTPAlias != '$Name' ORDER BY PortalID, HTTPAlias" -ConnectionString:$newConnectionString);
+      $aliases = @(invokeSql -Query:"SELECT PortalID, HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) ORDER BY PortalID, HTTPAlias" -ConnectionString:$newConnectionString);
       if ($Domain -ne '') {
         $aliasCount = $aliases.Count
         $ProcessManual = $false
