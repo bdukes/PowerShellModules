@@ -1,5 +1,7 @@
 # Change Log
 
+- DnnWebsiteManagement 2.0.9
+  - Fix inclusion of broken database connection logic
 - DnnWebsiteManagement 2.0.8
   - Fix incorrect original portal alias when renaming aliases
 - DnnWebsiteManagement 2.0.7
