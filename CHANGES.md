@@ -1,15 +1,18 @@
 # Change Log
 
-- DnnWebsiteManagement 2.0.10
-  - Fix error during Update Portal Alias step
-- DnnWebsiteManagement 2.0.9
-  - Fix inclusion of broken database connection logic
-- DnnWebsiteManagement 2.0.8
-  - Fix incorrect original portal alias when renaming aliases
-- DnnWebsiteManagement 2.0.7
-  - Fix error connecting to SQL Server
-- DnnWebsiteManagement 2.0.6
-  - Fix error when path has trailing slash, thanks ([#30](https://github.com/bdukes/PowerShellModules/pull/30), thanks [@DanielBolef](https://github.com/DanielBolef)!)
+- March 2025
+  - DnnWebsiteManagement 2.0.10
+    - Fix error during Update Portal Alias step
+- February 2025
+  - DnnWebsiteManagement 2.0.9
+    - Fix inclusion of broken database connection logic
+  - DnnWebsiteManagement 2.0.8
+    - Fix incorrect original portal alias when renaming aliases
+- January 2025
+  - DnnWebsiteManagement 2.0.7
+    - Fix error connecting to SQL Server
+  - DnnWebsiteManagement 2.0.6
+    - Fix error when path has trailing slash, thanks ([#30](https://github.com/bdukes/PowerShellModules/pull/30), thanks [@DanielBolef](https://github.com/DanielBolef)!)
 - October 2024
   - DnnWebsiteManagement 2.0.5
     - Ensure DNN site's application pool is using .NET Framework
