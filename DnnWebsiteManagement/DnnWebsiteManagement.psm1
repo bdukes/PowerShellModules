@@ -1051,7 +1051,7 @@ function columnExists {
     [string]$ConnectionString
   );
 
-  $result = invokeSql -Query:"SELECT COUNT(*) AS Count FROM sys.tables t JOIN sys.columns c ON t.object_id = c.object_id WHERE t.name = '$TableName' AND c.name = '$ColumnName'" -ConnectionString:$ConnectionString;
+  $result = invokeSql -Query:"SELECT COUNT(*) AS Count FROM sys.tables t JOIN sys.columns c ON t.object_id = c.object_id WHERE t.name = '$TableName' c.name = '$ColumnName'" -ConnectionString:$ConnectionString;
   return $result.Count -gt 0;
 }
 
