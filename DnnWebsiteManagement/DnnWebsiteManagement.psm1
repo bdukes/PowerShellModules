@@ -569,7 +569,7 @@ function New-DNNSite {
     $DatabaseOwner = $webConfig.configuration.dotnetnuke.data.providers.add.databaseOwner.TrimEnd('.')
 
     if ($PSCmdlet.ShouldProcess($Name, 'Update Portal Aliases')) {
-      $aliases = @(invokeSql -Query:"SELECT PortalID, HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) ORDER BY PortalID, HTTPAlias" -ConnectionString:$newConnectionString);
+      $aliases = @(invokeSql -Query:"SELECT PortalID, HTTPAlias FROM $(getDnnDatabaseObjectName -objectName:'PortalAlias' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) ORDER BY PortalID, HTTPAlias" -Database:$Name);
       if ($Domain -ne '') {
         $aliasCount = $aliases.Count
         $ProcessManual = $false
