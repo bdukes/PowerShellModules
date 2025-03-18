@@ -12,7 +12,7 @@
     RootModule        = 'DnnWebsiteManagement.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '2.0.10'
+    ModuleVersion     = '2.0.11'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()

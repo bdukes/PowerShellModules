@@ -1,6 +1,8 @@
 # Change Log
 
 - March 2025
+  - DnnWebsiteManagement 2.0.11
+    - Fix error when checking for FattMerchant and Stax columns
   - DnnWebsiteManagement 2.0.10
     - Fix error during Update Portal Alias step
 - February 2025
