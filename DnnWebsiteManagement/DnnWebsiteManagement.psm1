@@ -228,12 +228,14 @@ function Rename-DNNSite {
     Write-Information "$Name database not found"
   }
 
-  $oldLoginName = "IIS AppPool\$Name";
-  $newLoginName = "IIS AppPool\$NewName";
-  $loginCount = invokeSql -Query "SELECT COUNT(*) AS Count FROM sys.sql_logins WHERE name = '$newLoginName'" -ConnectionString $masterConnectionString;
-  if ($loginCount.Count -eq 0) {
-    if ($PSCmdlet.ShouldProcess($newLoginName, "Create SQL Server login")) {
-      invokeSql -Query:"CREATE LOGIN [$newLoginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$NewName];" -ConnectionString:$masterConnectionString
+  if ($connectionStringBuilder.IntegratedSecurity) {
+    $oldLoginName = "IIS AppPool\$Name";
+    $newLoginName = "IIS AppPool\$NewName";
+    $loginCount = invokeSql -Query "SELECT COUNT(*) AS Count FROM sys.sql_logins WHERE name = '$newLoginName'" -ConnectionString $masterConnectionString;
+    if ($loginCount.Count -eq 0) {
+      if ($PSCmdlet.ShouldProcess($newLoginName, "Create SQL Server login")) {
+        invokeSql -Query:"CREATE LOGIN [$newLoginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$NewName];" -ConnectionString:$masterConnectionString
+      }
     }
   }
 
@@ -730,17 +732,19 @@ function New-DNNSite {
     $webConfig.Save($webConfigPath)
   }
 
-  $loginName = "IIS AppPool\$Name";
-  $loginCount = invokeSql -Query:"SELECT COUNT(*) AS Count FROM sys.sql_logins WHERE name = '$loginName'" -ConnectionString:$masterConnectionString;
-  if (($loginCount.Count -gt 0) -and ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server login'))) {
-    invokeSql -Query:"CREATE LOGIN [$loginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$Name];" -ConnectionString:$masterConnectionString
-  }
+  if ($connectionStringBuilder.IntegratedSecurity) {
+    $loginName = "IIS AppPool\$Name";
+    $loginCount = invokeSql -Query:"SELECT COUNT(*) AS Count FROM sys.sql_logins WHERE name = '$loginName'" -ConnectionString:$masterConnectionString;
+    if (($loginCount.Count -gt 0) -and ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server login'))) {
+      invokeSql -Query:"CREATE LOGIN [$loginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$Name];" -ConnectionString:$masterConnectionString
+    }
 
-  if ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server User')) {
-    invokeSql -Query:"CREATE USER [$loginName] FOR LOGIN [$loginName];" -ConnectionString:$newConnectionString
-  }
-  if ($PSCmdlet.ShouldProcess($loginName, 'Add db_owner role')) {
-    invokeSql -Query:"EXEC sp_addrolemember N'db_owner', N'$loginName';" -ConnectionString:$newConnectionString
+    if ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server User')) {
+      invokeSql -Query:"CREATE USER [$loginName] FOR LOGIN [$loginName];" -ConnectionString:$newConnectionString
+    }
+    if ($PSCmdlet.ShouldProcess($loginName, 'Add db_owner role')) {
+      invokeSql -Query:"EXEC sp_addrolemember N'db_owner', N'$loginName';" -ConnectionString:$newConnectionString
+    }
   }
 
   if ($PSCmdlet.ShouldProcess($Name, 'Add HTTPS bindings')) {
