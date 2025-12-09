@@ -1161,12 +1161,12 @@ function watermarkLogos {
   );
 
   if (Get-Command 'gm.exe' -ErrorAction:SilentlyContinue) {
-    $cmd = 'gm.exe'
-    $subCmd = 'mogrify'
+    $cmd = 'gm.exe';
+    $subCmd = 'mogrify';
   }
   elseif (Get-Command 'mogrify' -ErrorAction:SilentlyContinue) {
-    $cmd = 'mogrify'
-    $subCmd = ''
+    $cmd = 'mogrify';
+    $subCmd = $null;
   }
   else {
     Write-Warning "Could not watermark logos, because neither GrapgicsMagick nor ImageMagick's mogrify command could not be found"
