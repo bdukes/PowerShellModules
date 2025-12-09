@@ -1,6 +1,8 @@
 # Change Log
 
 - March 2025
+  - DnnWebsiteManagement 2.0.13
+    - Fix restore hanging if ImageMagick is available
   - DnnWebsiteManagement 2.0.12
     - Revert release of 2.0.11
   - DnnWebsiteManagement 2.0.11
