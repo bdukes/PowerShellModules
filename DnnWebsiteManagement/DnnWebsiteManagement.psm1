@@ -671,53 +671,80 @@ function New-DNNSite {
     Write-Information "Setting SMTP to localhost"
     if ($PSCmdlet.ShouldProcess($Name, 'Set SMTP to localhost')) {
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPServer setting to localhost";
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPAuthentication setting to 0";
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPEnableSSL setting to N";
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPUsername setting to ''";
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPPassword setting to ''";
 
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'localhost' WHERE SettingName = 'SMTPServer'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPServer setting to localhost";
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '0' WHERE SettingName = 'SMTPAuthentication'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPAuthentication setting to 0";
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'SMTPEnableSSL'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPEnableSSL setting to N";
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPUsername'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPUsername setting to ''";
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'PortalSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = '' WHERE SettingName = 'SMTPPassword'" -ConnectionString:$newConnectionString
+      Write-Verbose "Updated SMTPPassword setting to ''";
+      Write-Debug "Finished settings SMTP to localhost";
     }
 
+    Write-Debug "About to clear WebServers table";
     if ($PSCmdlet.ShouldProcess($Name, 'Clear WebServers table')) {
       invokeSql -Query:"TRUNCATE TABLE $(getDnnDatabaseObjectName -objectName:'WebServers' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier)" -ConnectionString:$newConnectionString
+      Write-Verbose "Processed clear WebServers table";
     }
 
+    Write-Debug "About to turn off event log buffer";
     if ($PSCmdlet.ShouldProcess($Name, 'Turn off event log buffer')) {
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'HostSettings' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET SettingValue = 'N' WHERE SettingName = 'EventLogBuffer'" -ConnectionString:$newConnectionString
+      Write-Verbose "Turned off event log buffer";
     }
 
+    Write-Debug "About to turn off search crawler";
     if ($PSCmdlet.ShouldProcess($Name, 'Turn off search crawler')) {
       invokeSql -Query:"UPDATE $(getDnnDatabaseObjectName -objectName:'Schedule' -DatabaseOwner:$DatabaseOwner -ObjectQualifier:$ObjectQualifier) SET Enabled = 0 WHERE TypeFullName = 'DotNetNuke.Professional.SearchCrawler.SearchSpider.SearchSpider, DotNetNuke.Professional.SearchCrawler'" -ConnectionString:$newConnectionString
+      Write-Verbose 'Turned off search crawler';
     }
 
+    Write-Debug 'About to reset all passwords';
     if ($PSCmdlet.ShouldProcess($Name, "Set all passwords to 'pass'")) {
       invokeSql -Query:"UPDATE aspnet_Membership SET PasswordFormat = 0, Password = 'pass'" -ConnectionString:$newConnectionString
+      Write-Verbose 'Reset all passwords';
     }
 
+    Write-Debug 'About to watermark site logos';
     if ($PSCmdlet.ShouldProcess($Name, 'Watermark site logo(s)')) {
       watermarkLogos $Name $NameExtension
+      Write-Verbose 'Watermarked logos';
     }
 
+    Write-Debug 'About to remove App Insights config';
     $appInsightsPath = Join-Path $websitePath 'ApplicationInsights.config';
     if ((Test-Path $appInsightsPath) -and ($PSCmdlet.ShouldProcess($Name, 'Remove Application Insights config'))) {
       Remove-Item $appInsightsPath -WhatIf:$WhatIfPreference -Confirm:$false;
+      Write-Verbose 'Remove App Insights config';
     }
   }
 
+  Write-Debug 'About to set connectionString in web.config';
   if ($PSCmdlet.ShouldProcess($webConfigPath, 'Set connectionString in web.config')) {
     $webConfig.configuration.connectionStrings.add | Where-Object { $_.name -eq 'SiteSqlServer' } | ForEach-Object { $_.connectionString = $newConnectionString }
     $webConfig.configuration.appSettings.add | Where-Object { $_.key -eq 'SiteSqlServer' } | ForEach-Object { $_.value = $newConnectionString }
     $webConfig.Save($webConfigPath)
+    Write-Verbose 'Set connectionString in web.config';
   }
 
+  Write-Debug 'About to set objectQualifier and databaseOwner in web.config';
   if ($PSCmdlet.ShouldProcess($webConfigPath, 'Set objectQualifier and databaseOwner in web.config')) {
     $webConfig.configuration.dotnetnuke.data.providers.add | Where-Object { $_.name -eq 'SqlDataProvider' } | ForEach-Object { $_.objectQualifier = $ObjectQualifier; $_.databaseOwner = $DatabaseOwner }
     $webConfig.Save($webConfigPath)
+    Write-Verbose 'Set objectQualifier and databaseOwner in web.config';
   }
 
   $systemWebSection = $webConfig.configuration['system.web'];
@@ -725,14 +752,18 @@ function New-DNNSite {
     $systemWebSection = $webConfig.configuration.location['system.web'];
   }
 
+  Write-Debug 'About to update web.config to allow short passwords';
   if ($PSCmdlet.ShouldProcess($webConfigPath, 'Update web.config to allow short passwords')) {
     $systemWebSection.membership.providers.add | Where-Object { $_.type -eq 'System.Web.Security.SqlMembershipProvider' } | ForEach-Object { $_.minRequiredPasswordLength = '4' }
     $webConfig.Save($webConfigPath)
+    Write-Verbose 'Updated web.config to allow short passwords';
   }
 
+  Write-Debug 'About to turn off debug mode in web.config';
   if ($PSCmdlet.ShouldProcess($webConfigPath, 'Turn on debug mode in web.config')) {
     $systemWebSection.compilation.debug = 'true'
     $webConfig.Save($webConfigPath)
+    Write-Verbose 'Turned on debug mode in web.config';
   }
 
   if ($connectionStringBuilder.IntegratedSecurity) {
@@ -750,8 +781,10 @@ function New-DNNSite {
     }
   }
 
+  Write-Debug 'About to add HTTPS bindings';
   if ($PSCmdlet.ShouldProcess($Name, 'Add HTTPS bindings')) {
     New-SslWebBinding $Name $domains -WhatIf:$WhatIfPreference -Confirm:$false;
+    Write-Verbose 'Added HTTPS bindings';
   }
 
   if ($PSCmdlet.ShouldProcess("https://$Name", 'Open browser')) {
