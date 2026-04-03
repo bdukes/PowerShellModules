@@ -936,8 +936,8 @@ function extractPackages {
     $binPath = Join-Path $SiteZipPath 'bin'
     $assemblyPath = Join-Path $binPath 'DotNetNuke.dll';
     if (-not (Test-Path $assemblyPath)) {
-      $websitePath = Join-Path $SiteZipPath 'Website';
-      $binPath = Join-Path $websitePath 'bin';
+      $zipWebsitePath = Join-Path $SiteZipPath 'Website';
+      $binPath = Join-Path $zipWebsitePath 'bin';
       $assemblyPath = Join-Path $binPath 'DotNetNuke.dll';
       if (Test-Path $assemblyPath) {
         $CopyEntireDirectory = Test-Path (Join-Path $SiteZipPath '.gitignore');
