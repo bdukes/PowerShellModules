@@ -12,7 +12,7 @@
     RootModule        = 'DnnWebsiteManagement.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '2.0.13'
+    ModuleVersion     = '2.0.14'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@
     CompanyName       = 'Engage Software'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2025 Engage Software'
+    Copyright         = '(c) 2026 Engage Software'
 
     # Description of the functionality provided by this module
     Description       = "A set of functions for managing websites built on the DNN Platform."

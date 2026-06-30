@@ -1,5 +1,8 @@
 # Change Log
 
+- June 2026
+  - DnnWebsiteManagement 2.0.14
+    - Fix outputting zip contents to wrong folder
 - March 2025
   - DnnWebsiteManagement 2.0.13
     - Fix restore hanging if ImageMagick is available
