@@ -13,7 +13,7 @@ $sqlLogsDir = if ($env:dnn_website_mgmt_sql_logs_dir) { $env:dnn_website_mgmt_sq
 
 $serverConnectionString = $env:dnn_website_mgmt_sql_connection;
 if ($null -eq $serverConnectionString) {
-  $serverConnectionString = 'Data Source=127.0.0.1;Integrated Security=true;Encrypt=false';
+  $serverConnectionString = 'Data Source=localhost;Integrated Security=true;Encrypt=false';
 }
 
 $connectionStringBuilder = New-Object -TypeName 'System.Data.SqlClient.SqlConnectionStringBuilder' -ArgumentList @($serverConnectionString);
