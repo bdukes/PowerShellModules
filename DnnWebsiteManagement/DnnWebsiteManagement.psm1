@@ -769,7 +769,7 @@ function New-DNNSite {
   if ($connectionStringBuilder.IntegratedSecurity) {
     $loginName = "IIS AppPool\$Name";
     $loginCount = invokeSql -Query:"SELECT COUNT(*) AS Count FROM sys.sql_logins WHERE name = '$loginName'" -ConnectionString:$masterConnectionString;
-    if (($loginCount.Count -gt 0) -and ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server login'))) {
+    if (($loginCount.Count -eq 0) -and ($PSCmdlet.ShouldProcess($loginName, 'Create SQL Server login'))) {
       invokeSql -Query:"CREATE LOGIN [$loginName] FROM WINDOWS WITH DEFAULT_DATABASE = [$Name];" -ConnectionString:$masterConnectionString
     }
 
