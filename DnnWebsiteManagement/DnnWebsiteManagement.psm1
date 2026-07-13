@@ -8,6 +8,9 @@ if ($null -eq $www) {
   $www = Join-Path $inetpub 'wwwroot';
 }
 
+$sqlDataDir = $env:dnn_website_mgmt_sql_data_dir;
+$sqlLogsDir = if ($env:dnn_website_mgmt_sql_logs_dir) { $env:dnn_website_mgmt_sql_logs_dir } else { $sqlDataDir }
+
 function Install-DNNResource {
   [Alias("Install-DNNResources")]
   param(
@@ -1108,9 +1111,11 @@ function restoreDnnDatabase {
   }
 
   $dbRestoreFile.LogicalFileName = $logicalDataFileName;
-  $dbRestoreFile.PhysicalFileName = Join-Path $server.Information.MasterDBPath ($Name + '_Data.mdf');
+  $dataDir = if ($sqlDataDir) { $sqlDataDir } else { $server.Information.MasterDBPath }
+  $dbRestoreFile.PhysicalFileName = Join-Path $dataDir ($Name + '_Data.mdf');
   $dbRestoreLog.LogicalFileName = $logicalLogFileName;
-  $dbRestoreLog.PhysicalFileName = Join-Path $server.Information.MasterDBLogPath ($Name + '_Log.ldf');
+  $logsDir = if ($sqlLogsDir) { $sqlLogsDir } else { $server.Information.MasterDBLogPath }
+  $dbRestoreLog.PhysicalFileName = Join-Path $logsDir ($Name + '_Log.ldf');
 
   Restore-SqlDatabase -ReplaceDatabase -Database:$Name -RelocateFile:@($dbRestoreFile, $dbRestoreLog) -BackupFile:$DatabaseBackupPath -ServerInstance:'(local)' -Confirm:$false;
 }
