@@ -1,5 +1,8 @@
 # Change Log
 
+- July 2026
+  - DnnWebsiteManagement 2.1.0
+    - Allow overriding SQL Server data and log directories
 - June 2026
   - DnnWebsiteManagement 2.0.14
     - Fix outputting zip contents to wrong folder
